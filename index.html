@@ -1,0 +1,1323 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NPS — GAP entre Oficinas</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<!-- dados gerados pelo refresh_nps_data.py — executa: python refresh_nps_data.py -->
+<script src="data.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #EBEBEB; color: #333; font-size: 13px; }
+
+.topbar { background: #FFE600; height: 48px; display: flex; align-items: center; padding: 0 28px; gap: 20px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 6px rgba(0,0,0,.15); }
+.topbar-logo  { font-size: 17px; font-weight: 800; color: #333; letter-spacing: -.5px; }
+.topbar-sep   { width: 1px; height: 22px; background: rgba(0,0,0,.15); }
+.topbar-title { font-size: 12px; font-weight: 700; color: #555; }
+.topbar-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+.topbar-period{ font-size: 11px; background: rgba(0,0,0,.1); padding: 3px 10px; border-radius: 20px; color: #444; font-weight: 600; }
+
+.tabs-bar { background: #fff; border-bottom: 1px solid #E0E0E0; padding: 0 28px; display: flex; position: sticky; top: 48px; z-index: 99; overflow-x: auto; }
+.tab-btn  { padding: 11px 16px; border: none; background: none; font-size: 12px; font-weight: 600; color: #888; cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -1px; transition: all .15s; white-space: nowrap; }
+.tab-btn:hover  { color: #3483FA; }
+.tab-btn.active { color: #3483FA; border-bottom-color: #3483FA; }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+.page { max-width: 1020px; margin: 0 auto; padding: 22px 18px; }
+
+/* TEAM HEADER */
+.team-header { background: #222; color: #fff; border-radius: 10px; padding: 16px 22px; margin-bottom: 18px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.team-header h1 { font-size: 15px; font-weight: 700; }
+.team-header .sub { font-size: 11px; color: rgba(255,255,255,.5); margin-top: 3px; }
+.team-kpis { display: flex; gap: 22px; }
+.tkpi { text-align: right; }
+.tkpi-val { font-size: 21px; font-weight: 800; line-height: 1; }
+.tkpi-lbl { font-size: 10px; color: rgba(255,255,255,.5); margin-top: 2px; text-transform: uppercase; letter-spacing: .5px; }
+.c-blue  { color: #60A5FA; } .c-gray { color: #9CA3AF; }
+.c-green { color: #34D399; } .c-red  { color: #F87171; }
+
+/* PANEL */
+.panel { background: #fff; border-radius: 10px; padding: 18px 22px; margin-bottom: 18px; }
+.sec-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: #888; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+.sec-title::after { content: ''; flex: 1; height: 1px; background: #F0F0F0; }
+
+/* SPREAD TABLE */
+.spread-canal-block { margin-bottom: 20px; }
+.spread-canal-block:last-child { margin-bottom: 0; }
+.canal-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.canal-tag { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 4px; text-transform: uppercase; letter-spacing: .4px; }
+.ct-c2c    { background: #E8F4FD; color: #1565C0; }
+.ct-chat   { background: #E8F5E9; color: #2E7D32; }
+.ct-offline{ background: #FFF3E0; color: #E65100; }
+.spread-val-pill { font-size: 12px; font-weight: 800; padding: 2px 10px; border-radius: 20px; }
+.svp-ok   { background: #E8F5E9; color: #00A650; }
+.svp-warn { background: #FFF3E0; color: #FF7733; }
+.svp-bad  { background: #FEECEF; color: #F23D4F; }
+
+/* OFFICE CARDS */
+.offices-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; margin-bottom: 18px; }
+.ocard { background: #fff; border-radius: 10px; padding: 16px 18px; border-top: 5px solid #ccc; }
+.ocard.ref  { border-top-color: #00A650; }
+.ocard.crit { border-top-color: #F23D4F; }
+.ocard.mid  { border-top-color: #FF7733; }
+.ocard-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px; }
+.ocard-name { font-size: 22px; font-weight: 800; }
+.ocard-badge { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 20px; }
+.badge-ref  { background: #E6F9F1; color: #00A650; }
+.badge-crit { background: #FEECEF; color: #F23D4F; }
+.ocard-nps  { font-size: 42px; font-weight: 800; line-height: 1; margin: 4px 0; }
+.ocard.ref  .ocard-nps { color: #00A650; }
+.ocard.crit .ocard-nps { color: #F23D4F; }
+.ocard.mid  .ocard-nps { color: #FF7733; }
+.ocard-pct  { font-size: 15px; font-weight: 400; }
+.ocard-meta { display: flex; gap: 14px; border-top: 1px solid #F5F5F5; padding-top: 9px; margin-top: 7px; }
+.ocard-stat { flex: 1; text-align: center; }
+.ocard-stat-val { font-size: 13px; font-weight: 700; }
+.ocard-stat-lbl { font-size: 10px; color: #999; margin-top: 1px; }
+/* channel pills inside card */
+.ch-split { display: flex; flex-direction: column; gap: 5px; margin-top: 10px; }
+.ch-row-pill { display: flex; align-items: center; justify-content: space-between; background: #F8F8F8; border-radius: 6px; padding: 5px 8px; }
+.ch-row-name { font-size: 9px; font-weight: 700; text-transform: uppercase; color: #888; }
+.ch-row-vals { display: flex; gap: 10px; align-items: center; }
+.ch-row-nps  { font-size: 12px; font-weight: 800; }
+.ch-row-gap  { font-size: 10px; font-weight: 600; }
+.ch-row-mon  { font-size: 10px; color: #aaa; }
+
+/* TABLES */
+table { border-collapse: collapse; width: 100%; }
+thead tr { background: #FAFAFA; }
+th { text-align: left; padding: 7px 10px; font-size: 10px; font-weight: 700; color: #999; border-bottom: 2px solid #F0F0F0; text-transform: uppercase; letter-spacing: .3px; white-space: nowrap; }
+td { padding: 7px 10px; border-bottom: 1px solid #F7F7F7; font-size: 12px; }
+tr:hover td { background: #FAFAFA; }
+tr.row-canal  td { background: #F5F5F5; font-weight: 700; font-size: 11px; color: #555; }
+tr.row-spread td { background: #FFF9C4; font-weight: 700; font-size: 11px; border-top: 1px solid #E6CF00; }
+tr.row-team   td { background: #FFF3CD; font-weight: 700; border-top: 2px solid #E6CF00; }
+tr.ch-sub td  { padding-left: 24px; color: #555; }
+.tr { text-align: right; } .tc { text-align: center; }
+.val-pos { color: #00A650; font-weight: 700; }
+.val-neg { color: #F23D4F; font-weight: 700; }
+.val-wrn { color: #FF7733; font-weight: 700; }
+.pill { display: inline-block; padding: 2px 7px; border-radius: 20px; font-size: 10px; font-weight: 700; }
+.pill-p { background: #E6F9F1; color: #00A650; }
+.pill-n { background: #FEECEF; color: #F23D4F; }
+.pill-w { background: #FFF3E0; color: #FF7733; }
+.pill-0 { background: #F5F5F5; color: #888; }
+
+/* CDU FILTER */
+.cdu-filter-bar { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; }
+.cdu-filter-bar label { font-size: 11px; font-weight: 700; color: #666; }
+.fsel { padding: 5px 10px; border: 1.5px solid #E0E0E0; border-radius: 6px; font-size: 11px; color: #333; background: #fff; cursor: pointer; outline: none; }
+.fsel:focus { border-color: #3483FA; }
+.opp-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 700; }
+.opp-high   { background: #FEECEF; color: #F23D4F; }
+.opp-medium { background: #FFF3E0; color: #FF7733; }
+.opp-low    { background: #FFF9C4; color: #856404; }
+.opp-none   { background: #E6F9F1; color: #00A650; }
+
+/* CH TAG */
+.ch-tag { display: inline-block; font-size: 9px; font-weight: 700; padding: 1px 6px; border-radius: 3px; text-transform: uppercase; letter-spacing: .3px; }
+.cht-c2c    { background: #E8F4FD; color: #1565C0; }
+.cht-chat   { background: #E8F5E9; color: #2E7D32; }
+.cht-offline{ background: #FFF3E0; color: #E65100; }
+
+/* CHART */
+.chart-h    { height: 290px; position: relative; }
+.chart-h-sm { height: 200px; position: relative; }
+.chart-title { font-size: 11px; font-weight: 700; color: #999; text-transform: uppercase; letter-spacing: .4px; margin-bottom: 10px; }
+
+/* SIMULATION */
+.sim-hero { display: flex; align-items: center; gap: 18px; background: #FFF9C4; border: 2px solid #FFE600; border-radius: 10px; padding: 14px 20px; margin-bottom: 14px; }
+.sim-gain-val { font-size: 38px; font-weight: 800; color: #00A650; line-height: 1; }
+.sim-gain-lbl { font-size: 10px; color: #856404; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; margin-top: 4px; }
+.sim-sep  { width: 1px; height: 52px; background: #E6CF00; flex-shrink: 0; }
+.sim-text { font-size: 12px; color: #555; line-height: 1.7; }
+.sim-text strong { color: #333; }
+.proj-ok   { font-size: 14px; font-weight: 800; color: #00A650; }
+.proj-miss { font-size: 14px; font-weight: 800; color: #FF7733; }
+.sim-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: start; }
+
+/* INSIGHTS */
+.insight-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.ibox { border-radius: 8px; padding: 13px 15px; }
+.ibox.blue  { background: #EBF3FF; border-left: 4px solid #3483FA; }
+.ibox.green { background: #E6F9F1; border-left: 4px solid #00A650; }
+.ibox h3 { font-size: 12px; font-weight: 700; margin-bottom: 8px; }
+.ibox.blue  h3 { color: #2968C8; }
+.ibox.green h3 { color: #00A650; }
+.ilist { list-style: none; }
+.ilist li { padding: 3px 0; font-size: 12px; line-height: 1.5; }
+.ilist li::before { content: '▸ '; color: #FFB800; font-weight: 700; }
+
+@media(max-width:700px){
+  .offices-grid { grid-template-columns: 1fr; }
+  .insight-row  { grid-template-columns: 1fr; }
+  .sim-grid     { grid-template-columns: 1fr; }
+}
+
+/* IMPORT MODAL */
+.import-overlay { position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:500; display:none; align-items:center; justify-content:center; }
+.import-overlay.open { display:flex; }
+.import-box { background:#fff; border-radius:12px; width:780px; max-width:95vw; max-height:88vh; overflow:auto; padding:28px 30px; }
+.import-box h2 { font-size:15px; font-weight:800; margin-bottom:4px; }
+.import-box .sub { font-size:11px; color:#888; margin-bottom:18px; }
+.import-sql { background:#1E1E1E; color:#D4D4D4; font-family:monospace; font-size:10px; border-radius:8px; padding:12px 14px; white-space:pre; overflow-x:auto; margin-bottom:16px; line-height:1.6; }
+.import-sql .kw { color:#569CD6; } .import-sql .fn { color:#DCDCAA; } .import-sql .str { color:#CE9178; } .import-sql .cm { color:#6A9955; }
+.import-textarea { width:100%; height:140px; border:1.5px solid #E0E0E0; border-radius:8px; padding:10px 12px; font-size:11px; font-family:monospace; resize:vertical; outline:none; }
+.import-textarea:focus { border-color:#3483FA; }
+.import-actions { display:flex; gap:10px; margin-top:14px; justify-content:flex-end; }
+.btn-primary { background:#3483FA; color:#fff; border:none; border-radius:8px; padding:9px 22px; font-size:12px; font-weight:700; cursor:pointer; }
+.btn-primary:hover { background:#2968C8; }
+.btn-sec { background:#F5F5F5; color:#555; border:none; border-radius:8px; padding:9px 18px; font-size:12px; font-weight:600; cursor:pointer; }
+.btn-import { background:#FFE600; color:#333; border:none; border-radius:8px; padding:6px 14px; font-size:11px; font-weight:800; cursor:pointer; box-shadow:0 1px 3px rgba(0,0,0,.15); }
+.btn-import:hover { background:#F0D800; }
+.import-status { font-size:11px; margin-top:8px; padding:6px 10px; border-radius:6px; display:none; }
+.import-status.ok  { display:block; background:#E6F9F1; color:#00A650; }
+.import-status.err { display:block; background:#FEECEF; color:#F23D4F; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-logo">mercadolibre</div>
+  <div class="topbar-sep"></div>
+  <div class="topbar-title">NPS — GAP entre Oficinas × Canal</div>
+  <div class="topbar-right">
+    <div class="topbar-period" id="topbar-period">—</div>
+  </div>
+</div>
+
+<!-- IMPORT MODAL -->
+<div class="import-overlay" id="import-overlay">
+  <div class="import-box">
+    <h2>📥 Importar Dados do BigQuery</h2>
+    <div class="sub">Execute a query abaixo no BigQuery, copie o resultado e cole na área de texto.</div>
+    <div class="import-sql"><span class="cm">-- Execute no BigQuery e cole o resultado abaixo</span>
+<span class="kw">WITH</span> BASE <span class="kw">AS</span> (
+  <span class="cm">-- Cole aqui a CTE BASE_NPS_Y20_DETAIL da sua query original</span>
+  ...
+)
+<span class="kw">SELECT</span>
+  NP.USER_TEAM_NAME,
+  <span class="fn">IF</span>(NP.USER_TEAM_ID = 2352, <span class="str">'C2C'</span>, NP.USER_TEAM_CHANNEL) <span class="kw">AS</span> USER_TEAM_CHANNEL,
+  NP.USER_OFFICE,
+  <span class="fn">FORMAT_DATE</span>(<span class="str">'%Y-%m-%d'</span>, <span class="fn">DATE_TRUNC</span>(NP.RES_END_DATE, MONTH))  <span class="kw">AS</span> PERIODO,
+  <span class="str">'MES'</span>    <span class="kw">AS</span> TIPO,
+  <span class="fn">COUNT</span>(*)  <span class="kw">AS</span> ENCUESTAS,
+  <span class="fn">ROUND</span>(<span class="fn">AVG</span>(NP.GAP_TGT), 2)  <span class="kw">AS</span> GAP_TGT,
+  <span class="fn">ROUND</span>((<span class="fn">SUM</span>(NP.PROMOTER) - <span class="fn">SUM</span>(NP.DETRACTOR)) * 100.0 / <span class="fn">COUNT</span>(*), 2) <span class="kw">AS</span> NPS,
+  <span class="fn">ROUND</span>(<span class="fn">AVG</span>(NP.SURVEY_TARGET_VALUE), 2) <span class="kw">AS</span> TARGET
+<span class="kw">FROM</span> BASE NP
+<span class="kw">GROUP BY</span> 1,2,3,4,5
+<span class="kw">UNION ALL</span>
+<span class="kw">SELECT</span>
+  NP.USER_TEAM_NAME,
+  <span class="fn">IF</span>(NP.USER_TEAM_ID = 2352, <span class="str">'C2C'</span>, NP.USER_TEAM_CHANNEL),
+  NP.USER_OFFICE,
+  <span class="fn">FORMAT_DATE</span>(<span class="str">'%Y-%m-%d'</span>, <span class="fn">DATE_TRUNC</span>(NP.RES_END_DATE, ISOWEEK)) <span class="kw">AS</span> PERIODO,
+  <span class="str">'SEMANA'</span>  <span class="kw">AS</span> TIPO,
+  <span class="fn">COUNT</span>(*),
+  <span class="fn">ROUND</span>(<span class="fn">AVG</span>(NP.GAP_TGT), 2),
+  <span class="fn">ROUND</span>((<span class="fn">SUM</span>(NP.PROMOTER) - <span class="fn">SUM</span>(NP.DETRACTOR)) * 100.0 / <span class="fn">COUNT</span>(*), 2),
+  <span class="fn">ROUND</span>(<span class="fn">AVG</span>(NP.SURVEY_TARGET_VALUE), 2)
+<span class="kw">FROM</span> BASE NP
+<span class="kw">WHERE</span> <span class="fn">DATE_TRUNC</span>(NP.RES_END_DATE, ISOWEEK) >= <span class="fn">DATE_SUB</span>(<span class="fn">CURRENT_DATE</span>(), <span class="kw">INTERVAL</span> 3 WEEK)
+<span class="kw">GROUP BY</span> 1,2,3,4,5
+<span class="kw">ORDER BY</span> 1,2,3,4</div>
+    <div style="font-size:11px;font-weight:700;color:#555;margin-bottom:6px">Cole o resultado aqui (TSV / CSV — separado por tabulação ou ponto-e-vírgula):</div>
+    <textarea class="import-textarea" id="import-textarea" placeholder="USER_TEAM_NAME&#9;USER_TEAM_CHANNEL&#9;USER_OFFICE&#9;PERIODO&#9;TIPO&#9;ENCUESTAS&#9;GAP_TGT&#9;NPS&#9;TARGET&#10;BR_Buyers_Pre_Entrega&#9;MULTICANAL CHAT&#9;AEC&#9;2025-12-01&#9;MES&#9;3200&#9;0.12&#9;55.12&#9;55.00&#10;..."></textarea>
+    <div class="import-status" id="import-status"></div>
+    <div class="import-actions">
+      <button class="btn-sec" onclick="closeImport()">Cancelar</button>
+      <button class="btn-primary" onclick="applyImport()">✔ Aplicar e Gerar Relatório</button>
+    </div>
+  </div>
+</div>
+
+<div class="tabs-bar">
+  <button class="tab-btn active" onclick="switchTab('cross')">🌐 Cross</button>
+  <button class="tab-btn" onclick="switchTab('pre')">BR_Buyers_Pre_Entrega</button>
+  <button class="tab-btn" onclick="switchTab('post')">BR_Buyers_Post_Entrega</button>
+  <button class="tab-btn" onclick="switchTab('compra')">BR_Buyers_Compra</button>
+</div>
+
+<div id="tab-cross"  class="tab-content active"><div class="page" id="page-cross"></div></div>
+<div id="tab-pre"    class="tab-content"><div class="page" id="page-pre"></div></div>
+<div id="tab-post"   class="tab-content"><div class="page" id="page-post"></div></div>
+<div id="tab-compra" class="tab-content"><div class="page" id="page-compra"></div></div>
+
+<script>
+Chart.register(ChartDataLabels);
+Chart.defaults.set('plugins.datalabels', { display: false });
+
+// preenchidos dinamicamente pelo data.js / buildTeamsFromRows
+const DATES  = { wa:'—', wb:'—', year:'—' };
+const MONTHS = [];
+
+// Canal keys
+const CH = { C2C:'MULTICANAL C2C', CHAT:'MULTICANAL CHAT', OFL:'OFFLINE' };
+
+// ── CONTEÚDO ESTÁTICO (CDUs, hallazgos, ações — editável manualmente) ────────
+const STATIC = {
+  pre: {
+    cdus:[
+      { cdu:'PNR', sub:'Contradictório - XD/DS/FBM', sol:'Mediação encerrada: entrega confirmada (fallo V)', ch:CH.OFL, nps_a:29.8, nps_m:31.2, target:47.0, enc_a:145, det_a:45 },
+      { cdu:'PNR', sub:'Contradictório - XD/DS/FBM', sol:'Mediação encerrada: produto extraviado (fallo C)', ch:CH.OFL, nps_a:22.5, nps_m:24.1, target:47.0, enc_a:82,  det_a:31 },
+      { cdu:'Entrega', sub:'Atraso na entrega', sol:'Rastreio atualizado / Prazo prorrogado', ch:CH.CHAT, nps_a:38.4, nps_m:40.1, target:55.0, enc_a:310, det_a:78 },
+      { cdu:'Entrega', sub:'Produto não recebido', sol:'Abertura de reclamação PNR', ch:CH.CHAT, nps_a:41.2, nps_m:42.8, target:55.0, enc_a:230, det_a:62 },
+      { cdu:'Pagamento', sub:'Reembolso pendente', sol:'Estorno processado', ch:CH.OFL, nps_a:44.1, nps_m:45.5, target:53.0, enc_a:190, det_a:48 },
+      { cdu:'PNR', sub:'Previo al despacho', sol:'Cancelamento da venda', ch:CH.OFL, nps_a:37.8, nps_m:38.5, target:47.0, enc_a:98,  det_a:28 },
+      { cdu:'Entrega', sub:'Jornada da entrega', sol:'Instrução de retirada / Endereço corrigido', ch:CH.CHAT, nps_a:47.1, nps_m:48.3, target:55.0, enc_a:175, det_a:35 },
+      { cdu:'C2C', sub:'Compra segura', sol:'Orientação de garantia MeLi', ch:CH.C2C, nps_a:70.2, nps_m:71.0, target:71.0, enc_a:355, det_a:8 },
+    ],
+    hallazgos:[
+      { b:'ATE-CHAT crítico:',          d:' GAP −17.45 pp em Jan/26 — pior mês do histórico.' },
+      { b:'OFFLINE spread elevado:',    d:' dispersão > 6 pp em todos os meses — padrão estrutural.' },
+      { b:'CTX sem dados em Mar/26:',   d:' verificar encerramento de operação ou problema de registro.' },
+      { b:'AEC-CHAT melhora Fev/26:',   d:' +2.85 pp vs target — único office acima da meta no mês.' },
+    ],
+    accoes:[
+      { b:'ATE-CHAT — diagnóstico:',    d:' GAP acumulado crítico; revisar calibração, CDUs e liderança.' },
+      { b:'OFFLINE cross-office:',      d:' plano unificado para reduzir dispersão estrutural no canal.' },
+      { b:'Boas práticas AEC-CHAT:',    d:' mapear o que gera GAP positivo em Fev/26 e replicar.' },
+    ],
+  },
+  post: {
+    cdus:[
+      { cdu:'Posterior entrega', sub:'Produto com defeito', sol:'Abertura de reclamação garantia', ch:CH.OFL, nps_a:33.2, nps_m:35.8, target:55.0, enc_a:210, det_a:72 },
+      { cdu:'Posterior entrega', sub:'Produto incorreto', sol:'Logística reversa ativada', ch:CH.OFL, nps_a:38.5, nps_m:39.2, target:55.0, enc_a:165, det_a:54 },
+      { cdu:'Posterior entrega', sub:'Produto com defeito', sol:'Orientação garantia fabricante', ch:CH.CHAT, nps_a:42.1, nps_m:43.5, target:62.0, enc_a:280, det_a:68 },
+      { cdu:'PNR', sub:'Entrega extraviada', sol:'Acionamento transportadora', ch:CH.CHAT, nps_a:38.8, nps_m:40.2, target:62.0, enc_a:195, det_a:52 },
+      { cdu:'Reembolso', sub:'Devolução demorada', sol:'Estorno acelerado', ch:CH.OFL, nps_a:46.2, nps_m:47.8, target:57.0, enc_a:142, det_a:35 },
+      { cdu:'C2C', sub:'Compra segura', sol:'Orientação de garantia MeLi', ch:CH.C2C, nps_a:72.8, nps_m:73.1, target:73.0, enc_a:470, det_a:9 },
+    ],
+    hallazgos:[
+      { b:'OFFLINE spread elevado:',    d:' AEC (+2.5 pp) vs ATE (−6.1 pp) em Fev/26 — dispersão de 8.7 pp.' },
+      { b:'ATE-OFL queda crônica:',     d:' GAP negativo em todos os meses — ação estrutural necessária.' },
+      { b:'CDU produto com defeito:',   d:' NPS 33.2% vs target 55.0% (−21.8 pp) — maior oportunidade.' },
+      { b:'AEC referência cross-canal:',d:' positivo em CHAT e C2C — benchmark de boas práticas.' },
+    ],
+    accoes:[
+      { b:'ATE-OFL — diagnóstico:',     d:' investigar queda cross-mensal; verificar processo de devolução.' },
+      { b:'CDU produto com defeito:',   d:' revisar fluxo de garantia — maior oportunidade do time.' },
+      { b:'Benchmark AEC:',             d:' exportar práticas de CHAT/C2C para replicar em outros offices.' },
+    ],
+  },
+  compra: {
+    cdus:[
+      { cdu:'Compra', sub:'Pagamento recusado', sol:'Orientação de limite/dados', ch:CH.CHAT, nps_a:55.2, nps_m:56.8, target:72.0, enc_a:210, det_a:52 },
+      { cdu:'Compra', sub:'Frete inesperado', sol:'Orientação de políticas de frete', ch:CH.CHAT, nps_a:58.5, nps_m:59.2, target:72.0, enc_a:185, det_a:42 },
+      { cdu:'Compra', sub:'Cupom/desconto não aplicado', sol:'Ajuste de desconto / nova compra', ch:CH.OFL, nps_a:51.3, nps_m:52.8, target:68.5, enc_a:145, det_a:38 },
+      { cdu:'Compra', sub:'Produto indisponível', sol:'Indicação produto similar', ch:CH.OFL, nps_a:55.8, nps_m:57.1, target:68.5, enc_a:120, det_a:29 },
+      { cdu:'C2C', sub:'Compra segura', sol:'Orientação de garantia MeLi', ch:CH.C2C, nps_a:79.5, nps_m:79.8, target:79.5, enc_a:400, det_a:5 },
+    ],
+    hallazgos:[
+      { b:'AEC-CHAT destaque:',         d:' GAP +3.1 pp em Fev/26 — melhor segmento do time.' },
+      { b:'OFFLINE spread elevado:',    d:' AEC (−0.7 pp) vs MELICIDADE (−4.5 pp) em Mar/26 — 3.8 pp.' },
+      { b:'ATE-OFL crônico:',           d:' GAP negativo em todos os meses — gap estrutural.' },
+      { b:'C2C uniforme:',              d:' spread < 0.5 pp — canal muito padronizado.' },
+    ],
+    accoes:[
+      { b:'OFFLINE foco:',              d:' maior GAP sistêmico — revisar treinamento para o canal.' },
+      { b:'Pagamento recusado CHAT:',   d:' maior oportunidade (−16.8 pp vs target, 210 enc.).' },
+      { b:'Manter AEC-CHAT:',           d:' único acima do target — garantir continuidade das práticas.' },
+    ],
+  },
+};
+
+// ── TIMES (populados pelo data.js via buildTeamsFromRows) ─────────────────────
+let teams = {
+  pre:    { name:'BR_Buyers_Pre_Entrega',  nps_a:0, enc_a:0, target:0, nps_b:0, enc_b:0, offices:[], ...STATIC.pre },
+  post:   { name:'BR_Buyers_Post_Entrega', nps_a:0, enc_a:0, target:0, nps_b:0, enc_b:0, offices:[], ...STATIC.post },
+  compra: { name:'BR_Buyers_Compra',       nps_a:0, enc_a:0, target:0, nps_b:0, enc_b:0, offices:[], ...STATIC.compra },
+};
+
+// ─────────────────────────────────────────
+// CROSS
+// ─────────────────────────────────────────
+function buildCross() {
+  const all = [teams.pre, teams.post, teams.compra];
+  const enc_a  = all.reduce((s,t)=>s+t.enc_a,0);
+  const enc_b  = all.reduce((s,t)=>s+t.enc_b,0);
+  const nps_a  = all.reduce((s,t)=>s+t.nps_a*t.enc_a,0)/enc_a;
+  const nps_b  = all.reduce((s,t)=>s+t.nps_b*t.enc_b,0)/enc_b;
+  const target = all.reduce((s,t)=>s+t.target*t.enc_a,0)/enc_a;
+
+  // Aggregate o+ch (only offices with current-week data)
+  const map = {};
+  all.flatMap(t=>t.offices).filter(r=>r.enc_a>0&&r.nps_a!=null).forEach(r => {
+    const k = r.o+'||'+r.ch;
+    if(!map[k]) map[k]={o:r.o,ch:r.ch,ea:0,eb:0,em:0,_na:0,_nb:0,_nm:0,_tgt:0,
+      gap_months:Array(MONTHS.length).fill(null), _gm_ea:Array(MONTHS.length).fill(0),
+      enc_months:Array(MONTHS.length).fill(0)};
+    const m=map[k];
+    m._na+=r.nps_a*r.enc_a; m.ea+=r.enc_a; m._tgt+=r.target*r.enc_a;
+    if(r.nps_b!=null){m._nb+=r.nps_b*r.enc_b; m.eb+=r.enc_b;}
+    if(r.nps_m!=null){m._nm+=r.nps_m*r.enc_m; m.em+=r.enc_m;}
+    // aggregate gap_months weighted
+    r.gap_months.forEach((g,i)=>{ if(g!=null){ m.gap_months[i]=(m.gap_months[i]||0)+g*r.enc_months[i]; m._gm_ea[i]+=r.enc_months[i]; m.enc_months[i]+=r.enc_months[i]; }});
+  });
+  const offices = Object.values(map).map(m=>({
+    o:m.o, ch:m.ch,
+    nps_a:m._na/m.ea, nps_b:m.eb>0?m._nb/m.eb:null, nps_m:m.em>0?m._nm/m.em:null,
+    target:m._tgt/m.ea, enc_a:m.ea, enc_b:m.eb, enc_m:m.em,
+    gap_months:m.gap_months.map((g,i)=>m._gm_ea[i]>0?g/m._gm_ea[i]:null),
+    enc_months:m.enc_months,
+  }));
+
+  // CDUs agregados
+  const cduMap = {};
+  all.flatMap(t=>t.cdus).forEach(r=>{
+    const k=r.cdu+'||'+r.sub+'||'+r.sol+'||'+r.ch;
+    if(!cduMap[k]) cduMap[k]={...r,_na:0,_nm:0,_tgt:0,ea:0,em:0,det:0};
+    const m=cduMap[k];
+    m._na+=r.nps_a*r.enc_a; m._nm+=r.nps_m*r.enc_m; m._tgt+=r.target*r.enc_a;
+    m.ea+=r.enc_a; m.em+=r.enc_m; m.det+=r.det_a;
+  });
+  const cdus = Object.values(cduMap).map(m=>({
+    cdu:m.cdu, sub:m.sub, sol:m.sol, ch:m.ch,
+    nps_a:m._na/m.ea, nps_m:m._nm/m.em, target:m._tgt/m.ea,
+    enc_a:m.ea, enc_m:m.em, det_a:m.det,
+  }));
+
+  return {
+    name:'Cross — Todos os Times', enc_a, enc_b, nps_a, nps_b, target,
+    nps_m:nps_a, enc_m:enc_a,  // fallback for renders that still read nps_m
+    offices, cdus,
+    hallazgos:[
+      { b:'Visão cross:',              d:` NPS ${f(nps_a)}% vs target ${f(target)}% — GAP ${fpp(nps_a-target,true)}.` },
+      { b:'OFFLINE dispersão elevada:',d:` padrão estrutural em todos os times — plano de ação necessário.` },
+      { b:'C2C uniforme:',             d:` spread < 1 pp em todos os times — canal muito padronizado.` },
+      { b:'ATE-CHAT crítico cross:',   d:` pior segmento transversal em PRE — ação coordenada urgente.` },
+    ],
+    accoes:[
+      { b:'Programa OFFLINE cross:',   d:` plano unificado para reduzir dispersão no canal OFFLINE.` },
+      { b:'Benchmark AEC-CHAT:',       d:` exportar boas práticas do melhor office+canal para os demais.` },
+      { b:'CDU PNR OFFLINE:',          d:` maior oportunidade cross — revisão de processo de mediação.` },
+    ],
+  };
+}
+
+// ─────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────
+const f   = (v,d=1) => v==null||isNaN(v)?'—':v.toFixed(d);
+const fpp = (v,sign=true,d=1) => { if(v==null||isNaN(v))return'—'; const s=(sign&&v>0)?'+':''; return s+v.toFixed(d)+' pp'; };
+const cls = v => v>0?'val-pos':v<0?'val-neg':'';
+const pillCls = v => v>0.5?'pill-p':v<-0.5?'pill-n':v<0?'pill-w':'pill-0';
+
+function aggByOffice(offices){
+  const map={};
+  // skip offices with no current-week data (enc_a=0 / nps_a=null)
+  offices.filter(r=>r.enc_a>0&&r.nps_a!=null).forEach(r=>{
+    if(!map[r.o]) map[r.o]={o:r.o,ea:0,eb:0,em:0,_na:0,_nb:0,_nm:0,_tgt:0};
+    const m=map[r.o];
+    m._na+=r.nps_a*r.enc_a;
+    if(r.nps_b!=null) { m._nb+=r.nps_b*r.enc_b; m.eb+=r.enc_b; }
+    if(r.nps_m!=null) { m._nm+=r.nps_m*r.enc_m; m.em+=r.enc_m; }
+    m._tgt+=r.target*r.enc_a;
+    m.ea+=r.enc_a;
+  });
+  return Object.values(map).map(m=>({
+    o:m.o, nps_a:m._na/m.ea, nps_b:m.eb>0?m._nb/m.eb:null, nps_m:m.em>0?m._nm/m.em:null,
+    target:m._tgt/m.ea, enc_a:m.ea, enc_b:m.eb, enc_m:m.em,
+  }));
+}
+
+function chTagHtml(ch){
+  if(ch===CH.C2C)    return `<span class="ch-tag cht-c2c">C2C</span>`;
+  if(ch===CH.CHAT)   return `<span class="ch-tag cht-chat">CHAT</span>`;
+  if(ch===CH.OFL)    return `<span class="ch-tag cht-offline">OFFLINE</span>`;
+  return `<span class="ch-tag">${ch}</span>`;
+}
+function canalTagCls(ch){
+  if(ch===CH.C2C)  return 'ct-c2c';
+  if(ch===CH.CHAT) return 'ct-chat';
+  return 'ct-offline';
+}
+
+function oppClass(gap){
+  if(gap < -10) return 'opp-high';
+  if(gap < -5)  return 'opp-medium';
+  if(gap < 0)   return 'opp-low';
+  return 'opp-none';
+}
+function oppLabel(gap){
+  if(gap < -10) return '🔴 Alta';
+  if(gap < -5)  return '🟡 Média';
+  if(gap < 0)   return '🟡 Baixa';
+  return '🟢 OK';
+}
+
+// ─────────────────────────────────────────
+// SIMULATION
+// ─────────────────────────────────────────
+function calcSim(team){
+  const agg = aggByOffice(team.offices);
+  const off = agg.filter(o=>o.nps_a<o.target).map(o=>({
+    ...o, gap:o.nps_a-o.target, gain:(o.target-o.nps_a)*(o.enc_a/team.enc_a)
+  })).sort((a,b)=>a.gap-b.gap);
+  const totalGain = off.reduce((s,o)=>s+o.gain,0);
+  return { offenders:off, totalGain, projected:team.nps_a+totalGain };
+}
+
+// ─────────────────────────────────────────
+// CHARTS
+// ─────────────────────────────────────────
+const _charts={};
+function killChart(id){ if(_charts[id]){_charts[id].destroy();delete _charts[id];} }
+
+const CH_COLORS={
+  [CH.C2C+'|AEC']:'rgba(21,101,192,.85)',  [CH.C2C+'|ATE']:'rgba(21,101,192,.55)',
+  [CH.C2C+'|CTX']:'rgba(21,101,192,.35)',  [CH.C2C+'|MELICIDADE']:'rgba(21,101,192,.20)',
+  [CH.CHAT+'|AEC']:'rgba(46,125,50,.85)',  [CH.CHAT+'|ATE']:'rgba(46,125,50,.60)',
+  [CH.CHAT+'|CTX']:'rgba(46,125,50,.35)',  [CH.CHAT+'|MELICIDADE']:'rgba(46,125,50,.20)',
+  [CH.OFL+'|AEC']: 'rgba(230,81,0,.85)',   [CH.OFL+'|ATE']: 'rgba(230,81,0,.60)',
+  [CH.OFL+'|CTX']: 'rgba(230,81,0,.35)',   [CH.OFL+'|MELICIDADE']: 'rgba(230,81,0,.20)',
+};
+
+function drawBarChart(id, team){
+  killChart(id);
+  const canvas=document.getElementById(id); if(!canvas)return;
+  // only offices with current-week data
+  const active = team.offices.filter(r=>r.enc_a>0&&r.nps_a!=null);
+  const labels  = active.map(r=>`${r.o}·${r.ch.replace('MULTICANAL ','')}`);
+  const npsA    = active.map(r=>r.nps_a);
+  const npsM    = active.map(r=>r.nps_m);
+  const targets = active.map(r=>r.target);
+  const bgA     = active.map(r=>CH_COLORS[r.ch+'|'+r.o]||'rgba(100,100,100,.6)');
+  const bgM     = active.map(r=>(CH_COLORS[r.ch+'|'+r.o]||'rgba(100,100,100,.6)').replace('.85','.35').replace('.60','.25').replace('.35','.15').replace('.20','.10'));
+
+  const allV=[...npsA,...npsM.filter(v=>v!=null),...targets].filter(v=>v!=null);
+  const minV=Math.min(...allV), maxV=Math.max(...allV);
+  const pad=(maxV-minV)*0.22;
+
+  _charts[id]=new Chart(canvas,{
+    type:'bar',
+    data:{labels,datasets:[
+      {label:`NPS ${MONTHS[MONTHS.length-1]} (mês)`, data:npsM, backgroundColor:bgM, borderRadius:3},
+      {label:`NPS ${DATES.wa} (sem.)`, data:npsA, backgroundColor:bgA, borderRadius:3},
+      {type:'line',label:'Target',data:targets,
+        borderColor:'rgba(50,50,50,.55)',backgroundColor:'transparent',
+        borderWidth:2,borderDash:[5,3],pointRadius:3,pointBackgroundColor:'rgba(50,50,50,.6)',tension:0,order:0},
+    ]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{position:'top',labels:{font:{size:10},boxWidth:12}},
+        tooltip:{callbacks:{label:ctx=>{
+          const v=ctx.raw;
+          if(ctx.dataset.type==='line') return `Target: ${v.toFixed(1)}%`;
+          return `${ctx.dataset.label}: ${v.toFixed(1)}%`;
+        }}},
+        datalabels:{display:true,anchor:'end',align:'top',font:{size:8,weight:'bold'},
+          formatter:(v,ctx)=>ctx.dataset.type==='line'?null:v!=null?v.toFixed(1)+'%':''}
+      },
+      scales:{
+        y:{min:minV-pad,max:maxV+pad,grid:{color:'#f5f5f5'},ticks:{callback:v=>v.toFixed(0)+'%',font:{size:10}}},
+        x:{grid:{display:false},ticks:{font:{size:9},maxRotation:30}}
+      }
+    }
+  });
+}
+
+function drawSimChart(id, team, sim){
+  killChart(id);
+  const canvas=document.getElementById(id); if(!canvas)return;
+  if(!sim.offenders.length) return;
+
+  const aggOff=aggByOffice(team.offices);
+  const npsVals=[team.target,team.nps_a,...aggOff.map(o=>o.nps_a)];
+  const minNPS=Math.min(...npsVals), maxNPS=Math.max(...npsVals);
+  const pad=Math.max((maxNPS-minNPS)*0.25,2);
+  const axisMin=minNPS-pad, axisMax=maxNPS+pad;
+
+  const dataF=[],colors=[],labels=[];
+  dataF.push([axisMin,team.target]); colors.push('#9E9E9E'); labels.push('Target');
+
+  // ordenar do menor impacto para o maior (crescente)
+  const aggSorted=[...aggOff].sort((a,b)=>{
+    const ia=(a.nps_a-a.target)*(a.enc_a/team.enc_a);
+    const ib=(b.nps_a-b.target)*(b.enc_a/team.enc_a);
+    return ia-ib;
+  });
+
+  let run=team.target;
+  aggSorted.forEach(o=>{
+    const imp=(o.nps_a-o.target)*(o.enc_a/team.enc_a);
+    const lo=imp>=0?run:run+imp, hi=imp>=0?run+imp:run;
+    dataF.push([lo,hi]); colors.push(imp>=0?'#00A650':'#F23D4F'); labels.push(o.o);
+    run+=imp;
+  });
+
+  const sumImp=aggOff.reduce((s,o)=>s+(o.nps_a-o.target)*(o.enc_a/team.enc_a),0);
+  const res=(team.nps_a-team.target)-sumImp;
+  if(Math.abs(res)>0.05){
+    const lo=res>=0?run:run+res, hi=res>=0?run+res:run;
+    dataF.push([lo,hi]); colors.push(res>=0?'#00A650':'#F23D4F'); labels.push('Outros'); run+=res;
+  }
+  dataF.push([axisMin,team.nps_a]); colors.push('#3483FA'); labels.push('NPS Atual');
+
+  _charts[id]=new Chart(canvas,{
+    type:'bar',
+    data:{labels,datasets:[{data:dataF,backgroundColor:colors,borderRadius:2}]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label:ctx=>{
+          const v=ctx.raw; if(!Array.isArray(v))return'';
+          const i=ctx.dataIndex;
+          if(i===0||i===dataF.length-1) return `NPS: ${v[1].toFixed(1)}%`;
+          return `Impacto: ${colors[i]==='#00A650'?'+':'-'}${Math.abs(v[1]-v[0]).toFixed(2)} pp`;
+        }}},
+        datalabels:{display:true,anchor:'end',align:'end',clamp:false,
+          font:{size:9,weight:'bold'},color:'#333',
+          formatter:(val,ctx)=>{
+            if(!Array.isArray(val))return'';
+            const i=ctx.dataIndex;
+            if(i===0||i===dataF.length-1) return val[1].toFixed(1)+'%';
+            const mag=Math.abs(val[1]-val[0]);
+            if(mag<0.1)return'';
+            return (colors[i]==='#00A650'?'+':'')+( colors[i]==='#F23D4F'?'-':'' )+mag.toFixed(2)+' pp';
+          }}
+      },
+      scales:{
+        y:{min:axisMin,max:axisMax,grid:{color:'#f5f5f5'},ticks:{callback:v=>v.toFixed(1)+'%',font:{size:10}}},
+        x:{grid:{display:false},ticks:{font:{size:10}}}
+      }
+    }
+  });
+}
+
+// ─────────────────────────────────────────
+// RENDER
+// ─────────────────────────────────────────
+function renderTeam(team, pageId){
+  const page=document.getElementById(pageId);
+  const sim =calcSim(team);
+  const aggOff=aggByOffice(team.offices);
+  const sorted=[...aggOff].sort((a,b)=>b.nps_a-a.nps_a);
+  const gap=team.nps_a-team.target;
+  const wow=team.nps_b!=null?team.nps_a-team.nps_b:null;
+
+  page.innerHTML=`
+    ${renderHeader(team,gap,wow)}
+    ${renderSpreadByCanal(team)}
+    ${renderOfficeCards(team,aggOff,sorted)}
+    ${renderBarSection(team,pageId)}
+    ${renderWoWTable(team,aggOff)}
+    ${renderSim(team,sim,pageId)}
+    ${renderInsights(team)}
+    ${renderCDU(team,pageId)}
+  `;
+
+  drawBarChart(`chart_bar_${pageId}`, team);
+  drawSimChart(`chart_sim_${pageId}`, team, sim);
+  bindCduFilter(pageId, team);
+}
+
+// ── HEADER
+function renderHeader(team,gap,wow){
+  return `
+  <div class="team-header">
+    <div>
+      <h1>${team.name}</h1>
+      <div class="sub">Semana ${DATES.wa}/${DATES.year} · ${team.enc_a.toLocaleString('pt-BR')} enc. semana</div>
+    </div>
+    <div class="team-kpis">
+      <div class="tkpi"><div class="tkpi-val c-blue">${f(team.nps_a)}%</div><div class="tkpi-lbl">NPS Sem.</div></div>
+      <div class="tkpi"><div class="tkpi-val c-gray">${f(team.target)}%</div><div class="tkpi-lbl">Target</div></div>
+      <div class="tkpi"><div class="tkpi-val ${gap>=0?'c-green':'c-red'}">${fpp(gap,true)}</div><div class="tkpi-lbl">GAP Sem.</div></div>
+      <div class="tkpi"><div class="tkpi-val ${wow>=0?'c-green':'c-red'}">${fpp(wow,true)}</div><div class="tkpi-lbl">WoW</div></div>
+    </div>
+  </div>`;
+}
+
+// ── SPREAD POR CANAL — matrix GAP_TGT: offices × (meses + semanas)
+function renderSpreadByCanal(team){
+  const canais = [...new Set(team.offices.map(r=>r.ch))];
+  const officeNames = [...new Set(team.offices.map(r=>r.o))];
+  const nMon = MONTHS.length;
+
+  // helper: spread (max-min) de um array, ignorando nulls
+  function dispersion(vals){
+    const v=vals.filter(x=>x!=null&&!isNaN(x));
+    if(v.length<2) return null;
+    return Math.max(...v)-Math.min(...v);
+  }
+
+  // helper: cell style for GAP_TGT
+  function gapCls(v){ return v==null||isNaN(v)?'':v>=0?'val-pos':v>=-5?'val-wrn':'val-neg'; }
+  function gapFmt(v){ return v==null||isNaN(v)?'<span style="color:#ccc">—</span>':`<span class="${gapCls(v)}">${fpp(v,true,2)}</span>`; }
+
+  let blocks = canais.map(ch => {
+    const rows = team.offices.filter(r=>r.ch===ch);
+    if(!rows.length) return '';
+
+    // collect GAP_TGT per office per period
+    // periods: months[0..n-1] + week_b + week_a
+    const offData = officeNames.map(oName => {
+      const r = rows.find(x=>x.o===oName);
+      if(!r) return { o:oName, gaps:Array(nMon+2).fill(null) };
+      const gap_b = r.nps_b!=null ? r.nps_b-r.target : null;
+      const gap_a = r.nps_a!=null ? r.nps_a-r.target : null;
+      return { o:oName, gaps:[...r.gap_months, gap_b, gap_a], enc_a:r.enc_a, target:r.target };
+    });
+
+    // DISPERSÃO per period (only offices with data)
+    const nPeriods = nMon+2;
+    const dispRow = Array.from({length:nPeriods},(_,pi)=>{
+      const vals = offData.map(d=>d.gaps[pi]).filter(v=>v!=null&&!isNaN(v));
+      if(vals.length<2) return null;
+      return Math.max(...vals)-Math.min(...vals);
+    });
+
+    // canal aggregate GAP (weighted avg of gap_a, for header pill)
+    const validA = offData.filter(d=>d.enc_a>0&&d.gaps[nMon+1]!=null);
+    const totEncA = validA.reduce((s,d)=>s+d.enc_a,0);
+    const canalGapA = totEncA>0 ? validA.reduce((s,d)=>s+d.gaps[nMon+1]*d.enc_a,0)/totEncA : null;
+
+    const spreadA = dispRow[nMon+1];
+    const spreadCls = spreadA==null?'svp-ok':spreadA>15?'svp-bad':spreadA>5?'svp-warn':'svp-ok';
+
+    const oRows = offData.map(d=>
+      `<tr>
+        <td><strong>${d.o}</strong></td>
+        ${d.gaps.map(v=>`<td class="tr">${gapFmt(v)}</td>`).join('')}
+      </tr>`
+    ).join('');
+
+    const dispRowHtml = `<tr class="row-spread">
+      <td>DISPERSÃO</td>
+      ${dispRow.map(v=>`<td class="tr"><span class="${v==null?'':dispersion([v])}">${v==null?'<span style="color:#ccc">—</span>':`<strong>${f(v,1)} pp</strong>`}</span></td>`).join('')}
+    </tr>`;
+
+    const periodHeaders = [
+      ...MONTHS.map(m=>`<th class="tr" style="font-size:10px">${m}</th>`),
+      `<th class="tr" style="font-size:10px;color:#888">Sem.<br>${DATES.wb}</th>`,
+      `<th class="tr" style="font-size:10px">Sem.<br>${DATES.wa}</th>`,
+    ].join('');
+
+    return `
+    <div class="spread-canal-block">
+      <div class="canal-header">
+        <span class="canal-tag ${canalTagCls(ch)}">${ch}</span>
+        ${spreadA!=null?`<span class="spread-val-pill ${spreadCls}">Dispersão sem.: ${f(spreadA,1)} pp</span>`:''}
+        ${canalGapA!=null?`<span class="spread-val-pill ${canalGapA>=0?'svp-ok':canalGapA>=-5?'svp-warn':'svp-bad'}" style="opacity:.85">GAP canal: ${fpp(canalGapA,true,2)}</span>`:''}
+      </div>
+      <div style="overflow-x:auto">
+      <table style="min-width:600px">
+        <thead><tr>
+          <th>Office</th>
+          ${periodHeaders}
+        </tr></thead>
+        <tbody>${oRows}</tbody>
+        ${dispRowHtml}
+      </table>
+      </div>
+    </div>`;
+  }).join('<hr style="border:none;border-top:1px solid #F0F0F0;margin:16px 0">');
+
+  return `
+  <div class="panel">
+    <div class="sec-title">GAP_TGT por Office × Canal — Histórico Mensal + Semanas</div>
+    <div style="font-size:10px;color:#999;margin-bottom:12px">Valores = NPS − Target (GAP_TGT). DISPERSÃO = max − min entre offices com dados no período.</div>
+    ${blocks}
+  </div>`;
+}
+
+// ── OFFICE CARDS
+function renderOfficeCards(team, aggOff, sorted){
+  const cards = sorted.map((o,rank) => {
+    const gap=o.nps_a-o.target, wow=o.nps_a-o.nps_b;
+    const gapMes=o.nps_m-o.target;
+    const ocls=rank===0?'ref':rank===sorted.length-1?'crit':'mid';
+    const badge=rank===0?'<span class="ocard-badge badge-ref">Referência</span>':
+                rank===sorted.length-1?'<span class="ocard-badge badge-crit">Crítico</span>':'';
+
+    const chs=team.offices.filter(r=>r.o===o.o);
+    const chPills=chs.map(r=>{
+      const g=r.nps_a-r.target, gm=r.nps_m-r.target;
+      return `<div class="ch-row-pill">
+        <div class="ch-row-name">${r.ch.replace('MULTICANAL ','')}</div>
+        <div class="ch-row-vals">
+          <span class="ch-row-mon">${f(r.nps_m)}% (mês)</span>
+          <span class="ch-row-nps">${f(r.nps_a)}%</span>
+          <span class="ch-row-gap ${g>=0?'val-pos':g>=-3?'val-wrn':'val-neg'}">${fpp(g,true)}</span>
+        </div>
+      </div>`;
+    }).join('');
+
+    return `
+    <div class="ocard ${ocls}">
+      <div class="ocard-head"><div class="ocard-name">${o.o}</div>${badge}</div>
+      <div class="ocard-nps">${f(o.nps_a)}<span class="ocard-pct">%</span></div>
+      <div class="ocard-meta">
+        <div class="ocard-stat"><div class="ocard-stat-val ${gap>=0?'val-pos':gap>=-3?'val-wrn':'val-neg'}">${fpp(gap,true)}</div><div class="ocard-stat-lbl">GAP Semana</div></div>
+        <div class="ocard-stat"><div class="ocard-stat-val ${gapMes>=0?'val-pos':gapMes>=-3?'val-wrn':'val-neg'}">${fpp(gapMes,true)}</div><div class="ocard-stat-lbl">GAP Mês</div></div>
+        <div class="ocard-stat"><div class="ocard-stat-val ${wow>=0?'val-pos':'val-neg'}">${fpp(wow,true)}</div><div class="ocard-stat-lbl">WoW</div></div>
+      </div>
+      <div class="ch-split">${chPills}</div>
+    </div>`;
+  });
+  return `<div class="offices-grid">${cards.join('')}</div>`;
+}
+
+// ── BAR CHART
+function renderBarSection(team, pageId){
+  return `
+  <div class="panel">
+    <div class="sec-title">NPS por Office × Canal — Semana vs Mês vs Target</div>
+    <div class="chart-h"><canvas id="chart_bar_${pageId}"></canvas></div>
+  </div>`;
+}
+
+// ── WOW TABLE
+function renderWoWTable(team, aggOff){
+  const offNames=[...new Set(aggOff.map(a=>a.o))]; // only offices with data
+  const totEncA=aggOff.reduce((s,a)=>s+a.enc_a,0);
+  let rows='';
+  offNames.forEach(oName=>{
+    const agg=aggOff.find(a=>a.o===oName);
+    if(!agg) return;
+    const aggGap=agg.nps_a-agg.target;
+    const aggWow=agg.nps_b!=null?agg.nps_a-agg.nps_b:null;
+    const aggGapM=agg.nps_m!=null?agg.nps_m-agg.target:null;
+    const rep=(agg.enc_a/totEncA*100).toFixed(1);
+    rows+=`<tr class="row-canal">
+      <td>${oName} <span style="font-size:10px;color:#999;font-weight:400">(agregado)</span></td>
+      <td class="tr">${f(agg.nps_b)}%</td>
+      <td class="tr">${f(agg.nps_a)}%</td>
+      <td class="tr" style="color:#888">${f(agg.nps_m)}%</td>
+      <td class="tr"><span class="pill ${pillCls(aggWow)}">${fpp(aggWow,true)}</span></td>
+      <td class="tr">${f(agg.target)}%</td>
+      <td class="tr"><span class="${aggGap>=0?'val-pos':aggGap>=-3?'val-wrn':'val-neg'}">${fpp(aggGap,true)}</span></td>
+      <td class="tr"><span class="${aggGapM==null?'':aggGapM>=0?'val-pos':aggGapM>=-3?'val-wrn':'val-neg'}">${fpp(aggGapM,true)}</span></td>
+      <td class="tr">${rep}%</td>
+    </tr>`;
+    team.offices.filter(r=>r.o===oName&&r.enc_a>0&&r.nps_a!=null).forEach(r=>{
+      const gap=r.nps_a-r.target;
+      const wow=r.nps_b!=null?r.nps_a-r.nps_b:null;
+      const gapM=r.nps_m!=null?r.nps_m-r.target:null;
+      const rep2=(r.enc_a/totEncA*100).toFixed(1);
+      rows+=`<tr class="ch-sub">
+        <td>${oName} ${chTagHtml(r.ch)}</td>
+        <td class="tr">${f(r.nps_b)}%</td>
+        <td class="tr">${f(r.nps_a)}%</td>
+        <td class="tr" style="color:#888">${f(r.nps_m)}%</td>
+        <td class="tr"><span class="pill ${pillCls(wow)}">${fpp(wow,true)}</span></td>
+        <td class="tr">${f(r.target)}%</td>
+        <td class="tr"><span class="${gap>=0?'val-pos':gap>=-3?'val-wrn':'val-neg'}">${fpp(gap,true)}</span></td>
+        <td class="tr"><span class="${gapM==null?'':gapM>=0?'val-pos':gapM>=-3?'val-wrn':'val-neg'}">${fpp(gapM,true)}</span></td>
+        <td class="tr">${rep2}%</td>
+      </tr>`;
+    });
+  });
+  const tw=team.nps_b!=null?team.nps_a-team.nps_b:null, tg=team.nps_a-team.target;
+  rows+=`<tr class="row-team">
+    <td>Time (total)</td>
+    <td class="tr">${f(team.nps_b)}%</td>
+    <td class="tr">${f(team.nps_a)}%</td>
+    <td class="tr" style="color:#888">—</td>
+    <td class="tr"><span class="pill ${pillCls(tw)}">${fpp(tw,true)}</span></td>
+    <td class="tr">${f(team.target)}%</td>
+    <td class="tr"><span class="${cls(tg)}">${fpp(tg,true)}</span></td>
+    <td class="tr">—</td>
+    <td class="tr">100%</td>
+  </tr>`;
+
+  return `
+  <div class="panel">
+    <div class="sec-title">Comparativo WoW — Office × Canal</div>
+    <table>
+      <thead><tr>
+        <th>Segmento</th>
+        <th class="tr">NPS Sem. ant.<br><span style="font-weight:400;font-size:9px">${DATES.wb}</span></th>
+        <th class="tr">NPS Semana<br><span style="font-weight:400;font-size:9px">${DATES.wa}</span></th>
+        <th class="tr">NPS Mês Atual<br><span style="font-weight:400;font-size:9px">${MONTHS[MONTHS.length-1]||'—'}</span></th>
+        <th class="tr">WoW</th>
+        <th class="tr">Target</th>
+        <th class="tr">GAP Semana</th>
+        <th class="tr">GAP Últ.Mês</th>
+        <th class="tr">Repr.</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>`;
+}
+
+// ── CDU × CANAL — OPORTUNIDADES
+function renderCDU(team, pageId){
+  // opções de processo vindas do campo PRO_PROCESS_NAME (campo cdu após buildCdusFromProcess)
+  const procs=[...new Set((team.cdus||[]).map(r=>r.cdu).filter(Boolean))].sort();
+  const procOpts=procs.map(p=>`<option value="${p}">${p}</option>`).join('');
+  return `
+  <div class="panel" id="cdu-panel-${pageId}">
+    <div class="sec-title">CDU × Sub-CDU × Solução — Oportunidades vs Target por Canal</div>
+    <div class="cdu-filter-bar">
+      <label>Canal:</label>
+      <select class="fsel" id="cdu-ch-${pageId}" onchange="renderCduTable('${pageId}')">
+        <option value="ALL">Todos os canais</option>
+        <option value="${CH.C2C}">${CH.C2C}</option>
+        <option value="${CH.CHAT}">${CH.CHAT}</option>
+        <option value="${CH.OFL}">${CH.OFL}</option>
+      </select>
+      <label>Processo:</label>
+      <select class="fsel" id="cdu-proc-${pageId}" onchange="renderCduTable('${pageId}')">
+        <option value="ALL">Todos os processos</option>
+        ${procOpts}
+      </select>
+      <label>Oportunidade:</label>
+      <select class="fsel" id="cdu-opp-${pageId}" onchange="renderCduTable('${pageId}')">
+        <option value="ALL">Todas</option>
+        <option value="high">🔴 Alta (&lt; −10 pp)</option>
+        <option value="medium">🟡 Média (−10 a −5 pp)</option>
+        <option value="low">🟡 Baixa (−5 a 0 pp)</option>
+        <option value="none">🟢 OK (≥ 0 pp)</option>
+      </select>
+      <label>Ordenar por:</label>
+      <select class="fsel" id="cdu-sort-${pageId}" onchange="renderCduTable('${pageId}')">
+        <option value="gap">GAP (maior oportunidade)</option>
+        <option value="vol">Volume (encuestas)</option>
+        <option value="det">Detratores</option>
+      </select>
+    </div>
+    <div id="cdu-table-${pageId}"></div>
+  </div>`;
+}
+
+function bindCduFilter(pageId, team){
+  window[`_cduData_${pageId}`] = team.cdus;
+  renderCduTable(pageId);
+}
+
+function renderCduTable(pageId){
+  const cdus = window[`_cduData_${pageId}`];
+  const ch   = document.getElementById(`cdu-ch-${pageId}`)?.value || 'ALL';
+  const sort = document.getElementById(`cdu-sort-${pageId}`)?.value || 'gap';
+  const cont = document.getElementById(`cdu-table-${pageId}`);
+  if(!cont) return;
+
+  const proc = document.getElementById(`cdu-proc-${pageId}`)?.value || 'ALL';
+  const opp  = document.getElementById(`cdu-opp-${pageId}`)?.value  || 'ALL';
+  let filtered = ch==='ALL' ? cdus : cdus.filter(r=>r.ch===ch);
+  if(proc!=='ALL') filtered = filtered.filter(r=>r.cdu===proc);
+  if(opp!=='ALL')  filtered = filtered.filter(r=>{
+    const gap=(r.nps_a??r.nps_m??0)-r.target;
+    if(opp==='high')   return gap < -10;
+    if(opp==='medium') return gap >= -10 && gap < -5;
+    if(opp==='low')    return gap >= -5  && gap < 0;
+    if(opp==='none')   return gap >= 0;
+  });
+  filtered = [...filtered].sort((a,b)=>{
+    if(sort==='gap') return (a.nps_a-a.target)-(b.nps_a-b.target);
+    if(sort==='vol') return b.enc_a-a.enc_a;
+    return b.det_a-a.det_a;
+  });
+
+  if(!filtered.length){
+    cont.innerHTML='<div style="text-align:center;padding:16px;color:#999">Nenhum dado para o filtro selecionado.</div>';
+    return;
+  }
+
+  const rows = filtered.map(r=>{
+    const gap  = r.nps_a - r.target;
+    const npsM = r.nps_m != null && !isNaN(r.nps_m) ? r.nps_m : null;
+    const gapM = npsM != null ? npsM - r.target : null;
+    return `<tr>
+      <td><strong>${r.cdu||'—'}</strong></td>
+      <td class="tc">${chTagHtml(r.ch)}</td>
+      <td class="tr">${f(r.nps_a)}%</td>
+      <td class="tr" style="color:#555">${npsM!=null?f(npsM)+'%':'—'}</td>
+      <td class="tr">${f(r.target)}%</td>
+      <td class="tr"><span class="${gap>=0?'val-pos':gap>=-5?'val-wrn':'val-neg'}">${fpp(gap,true)}</span></td>
+      <td class="tr" style="color:#555">${gapM!=null?fpp(gapM,true):'—'}</td>
+      <td class="tr">${r.enc_a.toLocaleString('pt-BR')}</td>
+      <td class="tr val-neg">${r.det_a}</td>
+      <td class="tc"><span class="opp-badge ${oppClass(gap)}">${oppLabel(gap)}</span></td>
+    </tr>`;
+  }).join('');
+
+  cont.innerHTML=`
+  <table>
+    <thead><tr>
+      <th>Processo (PRO_PROCESS_NAME)</th><th class="tc">Canal</th>
+      <th class="tr">NPS Sem.</th><th class="tr">NPS Mês</th><th class="tr">Target</th>
+      <th class="tr">GAP Sem.</th><th class="tr">GAP Mês</th>
+      <th class="tr">Encuestas</th><th class="tr">Detratores</th>
+      <th class="tc">Oportunidade</th>
+    </tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+// ── SIMULATION
+function renderSim(team, sim, pageId){
+  const {offenders,totalGain,projected}=sim;
+  const projOk=projected>=team.target;
+  const offRows=offenders.length===0
+    ?`<tr><td colspan="5" class="tc" style="color:#00A650;padding:12px">✅ Todos os offices acima do target</td></tr>`
+    :offenders.map(o=>`<tr>
+        <td><strong>${o.o}</strong></td>
+        <td class="tr val-neg">${f(o.nps_a)}%</td>
+        <td class="tr">${f(o.target)}%</td>
+        <td class="tr val-neg">${fpp(o.gap,true)}</td>
+        <td class="tr">${(o.enc_a/team.enc_a*100).toFixed(1)}%</td>
+        <td class="tr val-pos">+${f(o.gain,2)} pp</td>
+      </tr>`).join('')
+    +`<tr class="row-team"><td colspan="5">Ganho total</td><td class="tr val-pos">+${f(totalGain,2)} pp</td></tr>`;
+
+  const desc=offenders.length>0
+    ?`Se ${offenders.length===1?'o office <strong>'+offenders[0].o+'</strong>':'os <strong>'+offenders.length+' offices</strong>'} atingir${offenders.length>1?'em':''} o target:`
+    :'Todos os offices estão acima do target.';
+
+  return `
+  <div class="panel">
+    <div class="sec-title">Simulador — Impacto se offices ofensores atingirem o target</div>
+    <div class="sim-hero">
+      <div style="text-align:center;min-width:100px">
+        <div class="sim-gain-val">${offenders.length?'+'+f(totalGain,2):'—'}</div>
+        <div class="sim-gain-lbl">pp de ganho</div>
+      </div>
+      <div class="sim-sep"></div>
+      <div class="sim-text">
+        ${desc}<br>
+        NPS atual <strong>${f(team.nps_a)}%</strong> → projetado <span class="${projOk?'proj-ok':'proj-miss'}">${f(projected)}%</span>
+        <span style="font-size:11px;color:${projOk?'#00A650':'#FF7733'}">
+          (${projOk?'acima do target de '+f(team.target)+'%':'ainda '+fpp(projected-team.target,true)+' vs target'})
+        </span>
+      </div>
+    </div>
+    <div class="sim-grid">
+      <table>
+        <thead><tr><th>Office</th><th class="tr">NPS</th><th class="tr">Target</th><th class="tr">GAP</th><th class="tr">Repr.</th><th class="tr">Ganho</th></tr></thead>
+        <tbody>${offRows}</tbody>
+      </table>
+      <div class="chart-h-sm"><canvas id="chart_sim_${pageId}"></canvas></div>
+    </div>
+  </div>`;
+}
+
+// ── INSIGHTS
+function renderInsights(team){
+  // ─── gera hallazgos dinâmicos a partir dos dados reais ───────────────────
+  const canais=[CH.C2C,CH.CHAT,CH.OFL];
+  const dynHL=[], dynAC=[];
+
+  canais.forEach(ch=>{
+    const offs=team.offices.filter(r=>r.ch===ch&&r.enc_a>0&&r.nps_a!=null);
+    if(offs.length<2) return;
+    const sorted=[...offs].sort((a,b)=>(a.nps_a-a.target)-(b.nps_a-b.target));
+    const worst=sorted[0], best=sorted[sorted.length-1];
+    const disp=(best.nps_a-best.target)-(worst.nps_a-worst.target);
+    const chLabel=ch===CH.C2C?'C2C':ch===CH.CHAT?'CHAT':'OFFLINE';
+
+    // hallazgo
+    const worstGap=worst.nps_a-worst.target;
+    const bestGap=best.nps_a-best.target;
+    if(Math.abs(worstGap)>1){
+      dynHL.push(`<li><strong>${chLabel} — pior office: ${worst.o}</strong> GAP ${fpp(worstGap,true)} vs target. `+
+        `Melhor: ${best.o} com ${fpp(bestGap,true)}. Dispersão entre offices: <strong>${disp.toFixed(1)} pp</strong>.</li>`);
+    }
+
+    // ação concreta
+    if(worstGap<-4){
+      const ganho=(worst.target-worst.nps_a)*(worst.enc_a/team.enc_a);
+      dynAC.push(`<li><strong>${chLabel} / ${worst.o} — prioridade alta:</strong> `+
+        `NPS ${f(worst.nps_a)}% vs target ${f(worst.target)}% (${fpp(worstGap,true)}). `+
+        `Atingir o target representaria <span class="val-pos">+${ganho.toFixed(2)} pp</span> no NPS do time. `+
+        `Ações: calibração de equipe, revisão dos CDUs de maior volume, alinhamento de processos com o office ${best.o} (referência do canal).</li>`);
+    } else if(worstGap<0){
+      dynAC.push(`<li><strong>${chLabel} / ${worst.o}:</strong> `+
+        `GAP negativo controlado (${fpp(worstGap,true)}). Monitorar tendência e replicar práticas de ${best.o}.</li>`);
+    }
+  });
+
+  // fallback para dados estáticos se não houver dados reais suficientes
+  const hlItems = dynHL.length
+    ? dynHL.join('')
+    : (team.hallazgos||[]).map(h=>`<li><strong>${h.b}</strong>${h.d}</li>`).join('');
+  const acItems = dynAC.length
+    ? dynAC.join('')
+    : (team.accoes||[]).map(a=>`<li><strong>${a.b}</strong>${a.d}</li>`).join('');
+
+  return `
+  <div class="panel">
+    <div class="sec-title">Diagnóstico & Ações</div>
+    <div class="insight-row">
+      <div class="ibox blue"><h3>📌 Diagnóstico por Canal</h3><ul class="ilist">${hlItems}</ul></div>
+      <div class="ibox green"><h3>✅ O que fazer de diferente</h3><ul class="ilist">${acItems}</ul></div>
+    </div>
+  </div>`;
+}
+
+// ─────────────────────────────────────────
+// TABS & INIT
+// ── constrói CDUs dinâmicos a partir de NPS_PROCESS_DATA ─────────────────────
+function buildCdusFromProcess(procData, teamName){
+  const TEAM_MAP={
+    'BR_Buyers_Pre_Entrega':'BR_Buyers_Pre_Entrega',
+    'BR_Buyers_Post_Entrega':'BR_Buyers_Post_Entrega',
+    'BR_Buyers_Compra':'BR_Buyers_Compra',
+  };
+  const rows = procData.filter(r=>r.team===teamName);
+  if(!rows.length) return [];
+
+  const allPeriods=[...new Set(rows.map(r=>r.period))].sort();
+  const isMonth=p=>{ try{ return new Date(p+'T12:00:00').getDate()===1; }catch(e){ return false; } };
+  const mPeriods=allPeriods.filter(p=>rows.some(r=>r.period===p&&r.tipo==='MES'));
+  const wPeriods=allPeriods.filter(p=>rows.some(r=>r.period===p&&r.tipo==='SEMANA')).sort().reverse();
+  const weekA=wPeriods[0];
+
+  // agrupa por processo + canal
+  const map={};
+  rows.forEach(r=>{
+    const key=`${r.processo}||${r.ch}`;
+    if(!map[key]) map[key]={ processo:r.processo, ch:r.ch, months:{}, semanas:{} };
+    if(r.tipo==='MES') map[key].months[r.period]={nps:r.nps,gap:r.gap_tgt,target:r.target,enc:r.enc,det:r.det||0};
+    else               map[key].semanas[r.period]={nps:r.nps,gap:r.gap_tgt,target:r.target,enc:r.enc,det:r.det||0};
+  });
+
+  const CH_KEY_MAP={
+    'MULTICANAL C2C':CH.C2C,'MULTICANAL CHAT':CH.CHAT,'OFFLINE':CH.OFL,
+    'C2C':CH.C2C,'CHAT':CH.CHAT,
+  };
+
+  return Object.values(map).map(d=>{
+    const wA = d.semanas[weekA]||null;
+    const lastMon = mPeriods.length ? d.months[mPeriods[mPeriods.length-1]] : null;
+    const anyRow = wA || lastMon || Object.values(d.months)[0] || Object.values(d.semanas)[0] || {};
+    const chKey = CH_KEY_MAP[d.ch] || d.ch;
+    return {
+      cdu:    d.processo,
+      sub:    '',
+      sol:    '',
+      ch:     chKey,
+      nps_a:  wA     ? wA.nps     : null,
+      nps_m:  lastMon? lastMon.nps: null,
+      target: anyRow.target || 0,
+      enc_a:  wA     ? wA.enc     : 0,
+      enc_m:  lastMon? lastMon.enc: 0,
+      det_a:  wA     ? wA.det     : 0,
+    };
+  }).filter(r=>r.nps_a!=null||r.nps_m!=null);
+}
+
+// ─────────────────────────────────────────
+function switchTab(tabId){
+  ['cross','pre','post','compra'].forEach((id,i)=>{
+    document.querySelectorAll('.tab-btn')[i].classList.toggle('active',id===tabId);
+    document.getElementById(`tab-${id}`).classList.toggle('active',id===tabId);
+  });
+}
+
+window.addEventListener('DOMContentLoaded',()=>{
+  // ── carrega dados do data.js gerado pelo refresh_nps_data.py ────────────
+  if(window.NPS_DATA && window.NPS_DATA.length){
+    const built = buildTeamsFromRows(window.NPS_DATA);
+    if(built){
+      MONTHS.push(...built.months);
+      Object.assign(DATES, built.dates);
+      ['pre','post','compra'].forEach(tk=>{
+        if(built.teams[tk]) Object.assign(teams[tk], built.teams[tk], STATIC[tk]||{});
+      });
+    }
+    // ── constrói CDUs a partir de NPS_PROCESS_DATA (PRO_PROCESS_NAME) ──────
+    if(window.NPS_PROCESS_DATA && window.NPS_PROCESS_DATA.length){
+      ['pre','post','compra'].forEach(tk=>{
+        teams[tk].cdus = buildCdusFromProcess(window.NPS_PROCESS_DATA, teams[tk].name);
+      });
+    }
+  } else {
+    document.body.insertAdjacentHTML('afterbegin',
+      '<div style="background:#F23D4F;color:#fff;padding:10px 24px;font-size:13px;font-weight:700;'+
+      'text-align:center;position:sticky;top:48px;z-index:200">'+
+      '⚠ Dados não carregados — execute <code style="background:rgba(0,0,0,.25);padding:1px 7px;border-radius:3px">'+
+      'python refresh_nps_data.py</code> na pasta Downloads e reabra este arquivo.</div>');
+  }
+  // ────────────────────────────────────────────────────────────────────────
+  runEnrich();
+  document.getElementById('topbar-period').textContent=
+    DATES.wa && DATES.wa!=='—' ? `${DATES.wa}/${DATES.year}` : 'Sem dados';
+  renderTeam(buildCross(),'page-cross');
+  renderTeam(teams.pre,   'page-pre');
+  renderTeam(teams.post,  'page-post');
+  renderTeam(teams.compra,'page-compra');
+});
+
+// ─────────────────────────────────────────
+// IMPORT ENGINE
+// ─────────────────────────────────────────
+function runEnrich(){
+  Object.values(teams).forEach(team=>{
+    team.offices.forEach(r=>{
+      const lastIdx=r.gap_months.reduce((li,v,i)=>v!=null?i:li,-1);
+      r.nps_m  = lastIdx>=0 ? (r.target||0)+r.gap_months[lastIdx] : null;
+      r.enc_m  = lastIdx>=0 ? r.enc_months[lastIdx] : 0;
+    });
+  });
+}
+
+function openImport(){ document.getElementById('import-overlay').classList.add('open'); }
+function closeImport(){ document.getElementById('import-overlay').classList.remove('open'); }
+
+function applyImport(){
+  const raw = document.getElementById('import-textarea').value.trim();
+  const status = document.getElementById('import-status');
+  if(!raw){ status.className='import-status err'; status.textContent='⚠ Cole os dados antes de aplicar.'; return; }
+
+  const result = parseImportTSV(raw);
+  if(!result){ status.className='import-status err'; status.textContent='⚠ Formato inválido. Verifique o cabeçalho e o separador (tab ou ;).'; return; }
+  if(!result.rows.length){ status.className='import-status err'; status.textContent='⚠ Nenhuma linha válida encontrada.'; return; }
+
+  // Apply parsed data
+  const built = buildTeamsFromRows(result.rows);
+  if(!built){ status.className='import-status err'; status.textContent='⚠ Não foi possível montar os times. Verifique os nomes de USER_TEAM_NAME.'; return; }
+
+  // Update MONTHS
+  MONTHS.length=0; built.months.forEach(m=>MONTHS.push(m));
+  // Update DATES
+  Object.assign(DATES, built.dates);
+  // Update teams (preserve cdus/hallazgos/accoes from existing data)
+  ['pre','post','compra'].forEach(tk=>{
+    if(built.teams[tk]){
+      const existing=teams[tk]||{};
+      Object.assign(teams[tk], built.teams[tk], {
+        cdus:existing.cdus||[], hallazgos:existing.hallazgos||[], accoes:existing.accoes||[]
+      });
+    }
+  });
+
+  runEnrich();
+
+  // Re-render
+  document.getElementById('topbar-period').textContent=`${DATES.wa}/${DATES.year}`;
+  renderTeam(buildCross(),'page-cross');
+  renderTeam(teams.pre,   'page-pre');
+  renderTeam(teams.post,  'page-post');
+  renderTeam(teams.compra,'page-compra');
+
+  status.className='import-status ok';
+  status.textContent=`✔ ${result.rows.length} linhas importadas — relatório atualizado!`;
+}
+
+function parseImportTSV(raw){
+  const lines=raw.split('\n').map(l=>l.trim()).filter(Boolean);
+  if(lines.length<2) return null;
+  const sep=lines[0].includes('\t')?'\t':lines[0].includes(';')?';':',';
+  const headers=lines[0].split(sep).map(h=>h.trim().toUpperCase().replace(/"/g,''));
+  const idx=h=>headers.indexOf(h);
+  const COL={
+    TEAM:idx('USER_TEAM_NAME'), CH:idx('USER_TEAM_CHANNEL'), OFF:idx('USER_OFFICE'),
+    PER:idx('PERIODO'), TIPO:idx('TIPO'), ENC:idx('ENCUESTAS'),
+    GAP:idx('GAP_TGT'), NPS:idx('NPS'), TGT:idx('TARGET'),
+  };
+  if([COL.TEAM,COL.CH,COL.OFF,COL.PER,COL.GAP].some(c=>c<0)) return null;
+
+  const rows=lines.slice(1).map(l=>{
+    const c=l.split(sep).map(x=>x.trim().replace(/"/g,''));
+    const gap=parseFloat(c[COL.GAP]?.replace(',','.'));
+    if(isNaN(gap)) return null;
+    return {
+      team:c[COL.TEAM], ch:c[COL.CH], office:c[COL.OFF], period:c[COL.PER],
+      tipo:(COL.TIPO>=0?c[COL.TIPO]:'').toUpperCase(),
+      enc:parseInt(c[COL.ENC])||0, gap_tgt:gap,
+      nps:COL.NPS>=0?parseFloat(c[COL.NPS]?.replace(',','.')):null,
+      target:COL.TGT>=0?parseFloat(c[COL.TGT]?.replace(',','.')):null,
+    };
+  }).filter(Boolean);
+  return {rows};
+}
+
+function buildTeamsFromRows(rows){
+  const CH_MAP={
+    'MULTICANAL C2C':CH.C2C,'MULTICANAL CHAT':CH.CHAT,'OFFLINE':CH.OFL,
+    'C2C':CH.C2C,'CHAT':CH.CHAT,'OFFLINE':CH.OFL,
+  };
+  const TEAM_MAP={
+    'BR_BUYERS_PRE_ENTREGA':'pre','BR_BUYERS_POST_ENTREGA':'post','BR_BUYERS_COMPRA':'compra',
+    'BR_BUYERS_PRE':'pre','BR_BUYERS_POST':'post',
+  };
+  const resolveTeam=name=>TEAM_MAP[name.toUpperCase().replace(/_ENTREGA$/,'_ENTREGA')]
+    || TEAM_MAP[name.toUpperCase()]
+    || (name.toUpperCase().includes('PRE')&&!name.toUpperCase().includes('POST')?'pre':
+        name.toUpperCase().includes('POST')?'post':
+        name.toUpperCase().includes('COMPRA')?'compra':null);
+
+  // Separate months vs weeks
+  const allPeriods=[...new Set(rows.map(r=>r.period))].sort();
+  // Month = date is 1st day; week = any other Monday
+  const isMonth=p=>{ try{ return new Date(p+'T12:00:00').getDate()===1; }catch(e){ return false; } };
+  const monthPeriods=allPeriods.filter(p=>r=>isMonth(p)).filter(p=>isMonth(p));
+  const weekPeriods =allPeriods.filter(p=>!isMonth(p));
+
+  // Auto-detect tipo if column present
+  const autoMon =p=>rows.filter(r=>r.period===p&&r.tipo==='MES').length>0||isMonth(p);
+
+  const mPeriods=allPeriods.filter(p=>rows.some(r=>r.period===p&&(r.tipo==='MES'||(!r.tipo&&isMonth(p)))));
+  const wPeriods=allPeriods.filter(p=>rows.some(r=>r.period===p&&(r.tipo==='SEMANA'||(!r.tipo&&!isMonth(p))))).sort().reverse();
+
+  // Build MONTHS labels
+  const fmtMon=p=>{ const d=new Date(p+'T12:00:00'); const mon=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][d.getMonth()]; const yr=String(d.getFullYear()).slice(2); const isLast=p===mPeriods[mPeriods.length-1]; return mon+'/'+yr+(isLast?'*':''); };
+  const monthLabels=mPeriods.map(fmtMon);
+
+  // Format week range label
+  const fmtWeekLabel=p=>{ if(!p) return '—'; const d=new Date(p+'T12:00:00'); const d2=new Date(d); d2.setDate(d.getDate()+6); const pad=n=>String(n).padStart(2,'0'); return `${pad(d.getDate())}–${pad(d2.getDate())}/${pad(d2.getMonth()+1)}`; };
+  const weekA=wPeriods[0], weekB=wPeriods[1];
+
+  // Group rows by team+channel+office
+  const offMap={};
+  rows.forEach(r=>{
+    const tk=resolveTeam(r.team); if(!tk) return;
+    const chKey=CH_MAP[r.ch.toUpperCase()]||r.ch;
+    const key=`${tk}||${chKey}||${r.office}`;
+    if(!offMap[key]) offMap[key]={tk,chKey,office:r.office,months:{},weeksData:{}};
+    const m=offMap[key];
+    if(r.tipo==='MES'||(r.tipo===''&&isMonth(r.period))){
+      m.months[r.period]={gap_tgt:r.gap_tgt, enc:r.enc, target:r.target};
+    } else {
+      m.weeksData[r.period]={gap_tgt:r.gap_tgt, enc:r.enc, target:r.target, nps:r.nps};
+    }
+  });
+
+  // Build office rows per team
+  const teamOffices={pre:[],post:[],compra:[]};
+  Object.values(offMap).forEach(d=>{
+    const wA=d.weeksData[weekA], wB=d.weeksData[weekB];
+    const anyMon=Object.values(d.months)[0]||Object.values(d.weeksData)[0]||{};
+    const target=wA?.target??wB?.target??anyMon.target??0;
+    const nps_a=wA?target+wA.gap_tgt:null;
+    const nps_b=wB?target+wB.gap_tgt:null;
+    teamOffices[d.tk].push({
+      o:d.office, ch:d.chKey,
+      nps_a, enc_a:wA?.enc||0, target,
+      nps_b, enc_b:wB?.enc||0,
+      gap_months:mPeriods.map(mp=>d.months[mp]?.gap_tgt??null),
+      enc_months:mPeriods.map(mp=>d.months[mp]?.enc??0),
+    });
+  });
+
+  // Build team aggregates
+  const newTeams={};
+  ['pre','post','compra'].forEach(tk=>{
+    const offs=teamOffices[tk]; if(!offs.length) return;
+    const active=offs.filter(o=>o.enc_a>0&&o.nps_a!=null);
+    const enc_a=active.reduce((s,o)=>s+o.enc_a,0)||1;
+    const enc_b=active.reduce((s,o)=>s+o.enc_b,0)||1;
+    const nps_a=active.reduce((s,o)=>s+o.nps_a*o.enc_a,0)/enc_a;
+    const nps_b=active.length&&active.some(o=>o.nps_b!=null)?active.filter(o=>o.nps_b!=null).reduce((s,o)=>s+(o.nps_b||0)*o.enc_b,0)/enc_b:null;
+    const tgtEnc=active.reduce((s,o)=>s+o.enc_a,0)||1;
+    const target=active.reduce((s,o)=>s+o.target*o.enc_a,0)/tgtEnc;
+    newTeams[tk]={name:teams[tk]?.name||tk, nps_a, enc_a, target, nps_b, enc_b, offices:offs};
+  });
+
+  if(!Object.keys(newTeams).length) return null;
+  const year=weekA?new Date(weekA+'T12:00:00').getFullYear():2026;
+  return { teams:newTeams, months:monthLabels, dates:{wa:fmtWeekLabel(weekA),wb:fmtWeekLabel(weekB),year} };
+}
+</script>
+</body>
+</html>
