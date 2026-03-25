@@ -821,71 +821,52 @@ function buildSummary() {
       <div class="scard-sub">${s.det>0?fmtEnc(s.det)+' detratores':''}</div></div>`;
 }
 
-// ── GENERIC SECTION (impacto + tabela) ───────────────────────────────────
+// ── GENERIC SECTION (lista unificada com todos os dados) ─────────────────
 function buildImpactSection(containerId, segs, opts={}) {
   const el=document.getElementById(containerId);
   if(!segs||!segs.length){el.innerHTML='<div class="empty-msg">Sem dados para o filtro selecionado.</div>';return;}
   const sorted=[...segs].sort((a,b)=>a.gap-b.gap);
-  const negSegs=sorted.filter(s=>s.gap<0);
   const maxAbs=Math.max(...sorted.map(s=>Math.abs(s.gap)),1);
   let negIdx=0;
 
-  let oppHtml='';
-  if(negSegs.length){
-    const top3=negSegs.slice(0,3);
-    oppHtml=`<div class="opp-box"><div class="opp-box-title">🔴 Top Oportunidades de Recuperação</div>
-    <div class="opp-items">${top3.map((s,i)=>`
-      <div class="opp-item">
-        <div class="opp-item-rank">${i+1}</div>
-        <div class="opp-item-info">
-          <div class="opp-item-name">${opts.labelFn?opts.labelFn(s):s.key}</div>
-          <div class="opp-item-detail">${opts.detail?opts.detail(s):''}</div>
-          <div class="opp-item-kpis">
-            <div><div class="okpi-val">${fmtGap(s.gap)} pp</div><div class="okpi-lbl">GAP</div></div>
-            <div><div class="okpi-val" style="color:#8B5CF6">${fmtEnc(s.enc)}</div><div class="okpi-lbl">Volume</div></div>
-            <div><div class="okpi-val" style="color:#F97316">${Math.round(s.opp)}</div><div class="okpi-lbl" title="Volume × |GAP negativo|">Oportunidade</div></div>
-            ${s.det>0?`<div><div class="okpi-val" style="color:#DC2626">${fmtEnc(s.det)}</div><div class="okpi-lbl">Detratores</div></div>`:''}
-          </div>
-        </div>
-      </div>`).join('')}
-    </div></div>`;
-  }
-
-  const listHtml=sorted.map((s,i)=>{
+  const hasDet=segs.some(s=>s.det>0);
+  const rows=sorted.map((s,i)=>{
     const bp=Math.round((Math.abs(s.gap)/maxAbs)*100);
     const isNeg=s.gap<0;
     const rCls=rankCls(isNeg?negIdx++:99,isNeg);
-    return `<div class="impact-row">
-      <div class="impact-rank ${rCls}">${i+1}</div>
-      <div class="impact-name">${opts.labelFn?opts.labelFn(s):s.key}</div>
-      <div class="impact-bar-wrap"><div class="impact-bar ${barCls(s.gap)}" style="width:${bp}%"></div></div>
-      <div class="impact-gap ${gapCls(s.gap)}">${fmtGap(s.gap)} pp</div>
-      <div class="impact-meta"><span class="enc-pill">${fmtEnc(s.enc)}</span>
-        <span class="opp-pill ${oppCls(s.opp)}">${Math.round(s.opp)}</span></div>
-      <div class="impact-nps">${fmtNPS(s.nps)} / ${fmtNPS(s.target)}</div>
-    </div>`;
+    const label=opts.labelFn?opts.labelFn(s):s.key;
+    return `<tr>
+      <td style="width:28px;text-align:center">
+        <span class="impact-rank ${rCls}" style="display:inline-flex">${i+1}</span>
+      </td>
+      <td style="min-width:140px;max-width:260px">
+        <div style="font-size:11px;font-weight:600;color:#333;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${label}</div>
+        <div style="margin-top:4px;background:#F0F0F0;border-radius:3px;height:5px;overflow:hidden;max-width:200px">
+          <div style="height:100%;border-radius:3px;width:${bp}%" class="impact-bar ${barCls(s.gap)}"></div>
+        </div>
+      </td>
+      <td class="tr" style="width:70px"><span class="${gapCls(s.gap)}" style="font-size:12px;font-weight:800">${fmtGap(s.gap)} pp</span></td>
+      <td class="tr" style="width:60px;font-size:11px;color:#3483FA;font-weight:700">${fmtNPS(s.nps)}</td>
+      <td class="tr" style="width:60px;font-size:11px;color:#9CA3AF">${fmtNPS(s.target)}</td>
+      <td class="tr" style="width:70px;font-size:11px;color:#888">${fmtEnc(s.enc)}</td>
+      <td class="tr" style="width:70px"><span class="opp-pill ${oppCls(s.opp)}">${Math.round(s.opp)}</span></td>
+      ${hasDet?`<td class="tr" style="width:70px;font-size:11px;color:#F23D4F">${s.det?fmtEnc(s.det):'—'}</td>`:''}
+    </tr>`;
   }).join('');
 
-  const tblHtml=`<div class="divider"></div>
-  <div class="panel-title">Tabela Detalhada</div>
-  <div class="dtable-wrap"><table>
+  el.innerHTML=`<div class="dtable-wrap"><table>
     <thead><tr>
-      <th>${opts.colLabel||'Segmento'}</th>${opts.extraHead||''}
-      <th class="tr">NPS</th><th class="tr">Meta</th><th class="tr">GAP</th>
-      <th class="tr">Volume</th><th class="tr" title="Volume × |GAP negativo|">Oportunidade</th>${segs[0]&&segs[0].det?'<th class="tr">Detratores</th>':''}
+      <th style="width:28px"></th>
+      <th>${opts.colLabel||'Segmento'}</th>
+      <th class="tr">GAP</th>
+      <th class="tr">NPS</th>
+      <th class="tr">Meta</th>
+      <th class="tr">Volume</th>
+      <th class="tr" title="Volume × |GAP negativo|">Oportunidade</th>
+      ${hasDet?'<th class="tr">Detratores</th>':''}
     </tr></thead>
-    <tbody>${sorted.map(s=>`<tr>
-      <td>${opts.labelFn?opts.labelFn(s):s.key}</td>${opts.extraCell?opts.extraCell(s):''}
-      <td class="tr">${fmtNPS(s.nps)}</td>
-      <td class="tr val-neu">${fmtNPS(s.target)}</td>
-      <td class="tr ${gapCls(s.gap)}">${fmtGap(s.gap)} pp</td>
-      <td class="tr">${fmtEnc(s.enc)}</td>
-      <td class="tr ${oppCls(s.opp)}">${Math.round(s.opp)}</td>
-      ${s.det?`<td class="tr val-neg">${fmtEnc(s.det)}</td>`:''}
-    </tr>`).join('')}</tbody>
+    <tbody>${rows}</tbody>
   </table></div>`;
-
-  el.innerHTML=oppHtml+'<div class="impact-list">'+listHtml+'</div>'+tblHtml;
 }
 
 // ── HIGHLIGHT HELPERS ─────────────────────────────────────────────────────
