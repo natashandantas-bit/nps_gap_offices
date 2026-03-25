@@ -347,6 +347,9 @@ let teams = {
 // CROSS FILTER STATE
 // ─────────────────────────────────────────
 const CROSS_FILTER = { office:'ALL', team:'ALL', canal:'ALL' };
+const SEN_FILTER   = { seniority:'ALL' };
+const TL_FILTER    = { team:'ALL', canal:'ALL', office:'ALL', processo:'ALL' };
+const REP_FILTER   = { team:'ALL', canal:'ALL', office:'ALL', processo:'ALL' };
 
 // ─────────────────────────────────────────
 // CROSS (com filtros opcionais)
@@ -1022,7 +1025,12 @@ function renderCduTable(pageId){
     return;
   }
 
-  const rows = filtered.map(r=>{
+  const PAGE_SIZE=20;
+  const showAll=window[`_cduShowAll_${pageId}`]||false;
+  const visible=showAll?filtered:filtered.slice(0,PAGE_SIZE);
+  const hidden=filtered.length-visible.length;
+
+  const makeRow=r=>{
     const gap  = r.nps_a - r.target;
     const npsM = r.nps_m != null && !isNaN(r.nps_m) ? r.nps_m : null;
     const gapM = npsM != null ? npsM - r.target : null;
@@ -1038,7 +1046,23 @@ function renderCduTable(pageId){
       <td class="tr val-neg">${r.det_a}</td>
       <td class="tc"><span class="opp-badge ${oppClass(gap)}">${oppLabel(gap)}</span></td>
     </tr>`;
-  }).join('');
+  };
+
+  const verMaisBtn = hidden>0
+    ? `<tr><td colspan="10" style="text-align:center;padding:10px">
+        <button class="btn-sec" style="font-size:11px;padding:6px 18px"
+          onclick="window['_cduShowAll_${pageId}']=true;renderCduTable('${pageId}')">
+          Ver mais ${hidden} processos
+        </button>
+       </td></tr>`
+    : showAll
+      ? `<tr><td colspan="10" style="text-align:center;padding:10px">
+          <button class="btn-sec" style="font-size:11px;padding:6px 18px"
+            onclick="window['_cduShowAll_${pageId}']=false;renderCduTable('${pageId}')">
+            Ocultar
+          </button>
+         </td></tr>`
+      : '';
 
   cont.innerHTML=`
   <table>
@@ -1049,7 +1073,7 @@ function renderCduTable(pageId){
       <th class="tr">Encuestas</th><th class="tr">Detratores</th>
       <th class="tc">Oportunidade</th>
     </tr></thead>
-    <tbody>${rows}</tbody>
+    <tbody>${visible.map(makeRow).join('')}${verMaisBtn}</tbody>
   </table>`;
 }
 
@@ -1220,18 +1244,18 @@ function normCh(raw){
 // ABERTURA POR SENIORIDADE
 // ─────────────────────────────────────────
 function renderSeniority(){
-  const src = window.NPS_SENIORITY_DATA;
+  const src=window.NPS_SENIORITY_DATA;
   if(!src||!src.length){
     return `<div class="panel">
-      <div class="sec-title">Abertura por Senioridade — EXPERT vs NEWBIE</div>
+      <div class="sec-title">Abertura por Senioridade</div>
       <div style="text-align:center;padding:20px;color:#bbb;font-size:12px">
-        ⚠ Dados de senioridade não carregados — execute <code>python refresh_nps_data.py</code>.
+        Dados não carregados — execute <code>python refresh_nps_data.py</code>.
       </div></div>`;
   }
 
   const fOff=CROSS_FILTER.office, fTeam=CROSS_FILTER.team, fCh=CROSS_FILTER.canal;
+  const fSen=SEN_FILTER.seniority;
 
-  // pega período semanal mais recente
   const wRows=src.filter(r=>r.tipo==='SEMANA');
   if(!wRows.length) return '';
   const latestW=[...new Set(wRows.map(r=>r.period))].sort().pop();
@@ -1245,25 +1269,63 @@ function renderSeniority(){
   }
   if(!rows.length) return '';
 
-  // pivot: key=team||ch||office → { expert, newbie }
+  // filtro de senioridade
+  const senOpts=`
+    <option value="ALL"${fSen==='ALL'?' selected':''}>EXPERT + NEWBIE</option>
+    <option value="EXPERT"${fSen==='EXPERT'?' selected':''}>Só EXPERT</option>
+    <option value="NEWBIE"${fSen==='NEWBIE'?' selected':''}>Só NEWBIE</option>`;
+  const filterBar=`
+  <div class="cdu-filter-bar" style="margin-bottom:12px">
+    <label>Senioridade:</label>
+    <select class="fsel" onchange="SEN_FILTER.seniority=this.value;renderCross()">${senOpts}</select>
+  </div>`;
+
+  // MODO FLAT: só um grupo
+  if(fSen!=='ALL'){
+    const flat=rows.filter(r=>r.seniority===fSen).map(r=>({...r,ch:normCh(r.ch)}));
+    flat.sort((a,b)=>a.gap_tgt-b.gap_tgt);
+    if(!flat.length) return `<div class="panel"><div class="sec-title">Abertura por Senioridade</div>${filterBar}<div style="text-align:center;padding:12px;color:#aaa;font-size:12px">Sem dados para o filtro selecionado.</div></div>`;
+    const colCls=fSen==='EXPERT'?'sen-col-expert':'sen-col-newbie';
+    const colColor=fSen==='EXPERT'?'#1565C0':'#E65100';
+    const trs=flat.map(r=>`<tr>
+      <td style="font-size:11px;color:#888">${r.team.replace('BR_Buyers_','')}</td>
+      <td class="tc">${chTagHtml(r.ch)}</td>
+      <td><strong>${r.office}</strong></td>
+      <td class="tr ${colCls}">${f(r.nps)}%</td>
+      <td class="tr ${colCls}"><span class="${r.gap_tgt>=0?'val-pos':r.gap_tgt>=-5?'val-wrn':'val-neg'}">${fpp(r.gap_tgt,true)}</span></td>
+      <td class="tr ${colCls}" style="color:#888">${r.enc.toLocaleString('pt-BR')}</td>
+    </tr>`).join('');
+    return `
+    <div class="panel">
+      <div class="sec-title">Abertura por Senioridade — ${fSen} <span style="font-weight:400;font-size:10px;color:#aaa">semana ${DATES.wa}</span></div>
+      ${filterBar}
+      <div style="overflow-x:auto"><table>
+        <thead><tr>
+          <th>Time</th><th class="tc">Canal</th><th>Office</th>
+          <th class="tr ${colCls}" style="color:${colColor}">NPS</th>
+          <th class="tr ${colCls}" style="color:${colColor}">GAP_TGT</th>
+          <th class="tr ${colCls}" style="color:${colColor}">Enc.</th>
+        </tr></thead>
+        <tbody>${trs}</tbody>
+      </table></div>
+    </div>`;
+  }
+
+  // MODO PIVOT: EXPERT + NEWBIE lado a lado
   const pivot={};
   rows.forEach(r=>{
     const ch=normCh(r.ch);
     const k=`${r.team}||${ch}||${r.office}`;
     if(!pivot[k]) pivot[k]={team:r.team,ch,office:r.office,expert:null,newbie:null};
-    const d={nps:r.nps,gap:r.gap_tgt,enc:r.enc,target:r.target};
-    if(r.seniority==='EXPERT') pivot[k].expert=d;
-    else                        pivot[k].newbie=d;
+    const d={nps:r.nps,gap:r.gap_tgt,enc:r.enc};
+    if(r.seniority==='EXPERT') pivot[k].expert=d; else pivot[k].newbie=d;
   });
-
   const rows2=Object.values(pivot).filter(p=>p.expert&&p.newbie);
   if(!rows2.length) return '';
-
-  // ordenar: maior Δ absoluto primeiro (newbie mais defasado do expert)
   rows2.sort((a,b)=>Math.abs(b.expert.gap-b.newbie.gap)-Math.abs(a.expert.gap-a.newbie.gap));
 
   const trs=rows2.map(p=>{
-    const delta=p.expert.gap-p.newbie.gap; // positivo = expert melhor que newbie (esperado)
+    const delta=p.expert.gap-p.newbie.gap;
     return `<tr>
       <td style="font-size:11px;color:#888">${p.team.replace('BR_Buyers_','')}</td>
       <td class="tc">${chTagHtml(p.ch)}</td>
@@ -1281,9 +1343,9 @@ function renderSeniority(){
   return `
   <div class="panel">
     <div class="sec-title">Abertura por Senioridade — EXPERT vs NEWBIE <span style="font-weight:400;font-size:10px;color:#aaa">semana ${DATES.wa}</span></div>
-    <div style="font-size:10px;color:#999;margin-bottom:12px">Δ GAP = GAP Expert − GAP Newbie. Positivo = Expert acima do Newbie (esperado). Negativo = inversão de senioridade (alerta de calibração).</div>
-    <div style="overflow-x:auto">
-    <table>
+    ${filterBar}
+    <div style="font-size:10px;color:#999;margin-bottom:8px">Δ GAP = GAP Expert − GAP Newbie. Positivo = Expert acima do Newbie (esperado). Negativo = inversão (alerta de calibração).</div>
+    <div style="overflow-x:auto"><table>
       <thead><tr>
         <th>Time</th><th class="tc">Canal</th><th>Office</th>
         <th class="tr sen-col-expert" style="color:#1565C0">NPS Expert</th>
@@ -1295,8 +1357,48 @@ function renderSeniority(){
         <th class="tr">Δ GAP</th>
       </tr></thead>
       <tbody>${trs}</tbody>
-    </table>
+    </table></div>
+  </div>`;
+}
+
+// ─────────────────────────────────────────
+// helper: build filter selects para TL/REP
+// ─────────────────────────────────────────
+function _buildOutlierFilters(src, filterObj, onChangePrefix){
+  const latestW=[...new Set(src.map(r=>r.period))].sort().pop();
+  const base=src.filter(r=>r.period===latestW&&r.nps!=null);
+  const teams   =[...new Set(base.map(r=>r.team))].sort();
+  const canais  =[...new Set(base.map(r=>normCh(r.ch)))];
+  const offices =[...new Set(base.map(r=>r.office))].sort();
+  const processos=[...new Set(base.map(r=>r.processo).filter(Boolean))].sort();
+
+  const sel=(key,all,opts,label)=>`
+    <div class="filter-group">
+      <label>${label}</label>
+      <select class="fsel" onchange="${onChangePrefix}.${key}=this.value;renderCross()">
+        <option value="ALL"${filterObj[key]==='ALL'?' selected':''}>Todos</option>
+        ${opts.map(v=>`<option value="${v}"${filterObj[key]===v?' selected':''}>${typeof v==='string'&&v.startsWith('BR_Buyers_')?v.replace('BR_Buyers_',''):v}</option>`).join('')}
+      </select>
+    </div>`;
+
+  const chOpts=canais.map(ch=>{
+    const lbl=ch===CH.C2C?'C2C':ch===CH.CHAT?'CHAT':'OFFLINE';
+    return `<option value="${ch}"${filterObj.canal===ch?' selected':''}>${lbl}</option>`;
+  }).join('');
+
+  const hasFilter=Object.values(filterObj).some(v=>v!=='ALL');
+  return `
+  <div class="cdu-filter-bar" style="margin-bottom:12px">
+    ${sel('team','ALL',teams,'Time')}
+    <div class="filter-group">
+      <label>Canal</label>
+      <select class="fsel" onchange="${onChangePrefix}.canal=this.value;renderCross()">
+        <option value="ALL"${filterObj.canal==='ALL'?' selected':''}>Todos</option>${chOpts}
+      </select>
     </div>
+    ${sel('office','ALL',offices,'Office')}
+    ${sel('processo','ALL',processos,'Processo')}
+    ${hasFilter?`<button class="btn-sec" style="font-size:11px;padding:5px 14px" onclick="Object.assign(${onChangePrefix},{team:'ALL',canal:'ALL',office:'ALL',processo:'ALL'});renderCross()">✕ Limpar</button>`:''}
   </div>`;
 }
 
@@ -1307,65 +1409,59 @@ function renderTLOutlier(){
   const src=window.NPS_TEAM_DATA;
   if(!src||!src.length){
     return `<div class="panel">
-      <div class="sec-title">Outliers por Time (TL Level)</div>
+      <div class="sec-title">Outliers por TL</div>
       <div style="text-align:center;padding:20px;color:#bbb;font-size:12px">
-        ⚠ Dados de TL não carregados — execute <code>python refresh_nps_data.py</code>.
+        Dados não carregados — execute <code>python refresh_nps_data.py</code>.
       </div></div>`;
   }
 
-  const fOff=CROSS_FILTER.office, fTeam=CROSS_FILTER.team, fCh=CROSS_FILTER.canal;
-
   const latestW=[...new Set(src.map(r=>r.period))].sort().pop();
+  const filterBar=_buildOutlierFilters(src,TL_FILTER,'TL_FILTER');
+
   let rows=src.filter(r=>r.period===latestW&&r.nps!=null&&r.enc>=5);
-  if(fOff !=='ALL') rows=rows.filter(r=>r.office===fOff);
-  if(fCh  !=='ALL') rows=rows.filter(r=>normCh(r.ch)===fCh);
-  if(fTeam!=='ALL'){
-    const nm={pre:'BR_Buyers_Pre_Entrega',post:'BR_Buyers_Post_Entrega',compra:'BR_Buyers_Compra'};
-    rows=rows.filter(r=>r.team===nm[fTeam]);
-  }
-  if(!rows.length) return '';
+  if(TL_FILTER.team    !=='ALL'){const nm={pre:'BR_Buyers_Pre_Entrega',post:'BR_Buyers_Post_Entrega',compra:'BR_Buyers_Compra'};rows=rows.filter(r=>r.team===nm[TL_FILTER.team]);}
+  if(TL_FILTER.canal   !=='ALL') rows=rows.filter(r=>normCh(r.ch)===TL_FILTER.canal);
+  if(TL_FILTER.office  !=='ALL') rows=rows.filter(r=>r.office===TL_FILTER.office);
+  if(TL_FILTER.processo!=='ALL') rows=rows.filter(r=>r.processo===TL_FILTER.processo);
 
-  rows=[...rows].sort((a,b)=>a.gap_tgt-b.gap_tgt); // pior → melhor
-  const n=rows.length;
-  const topN=Math.min(3,Math.ceil(n*0.2));
+  if(!rows.length) return `<div class="panel"><div class="sec-title">Outliers por TL</div>${filterBar}<div style="text-align:center;padding:12px;color:#aaa;font-size:12px">Sem dados para o filtro selecionado.</div></div>`;
 
-  const trs=rows.map((r,i)=>{
-    const isBad =i<topN;
-    const isGood=i>=n-topN;
-    const rankIcon=isBad ?`<span class="outlier-rank rank-bad">${i+1}</span>`:
-                   isGood?`<span class="outlier-rank rank-good">▲</span>`:
-                          `<span class="outlier-rank rank-mid">${i+1}</span>`;
+  // agrupa por TL+time+canal+office (soma encuestas, média ponderada NPS)
+  const tlMap={};
+  rows.forEach(r=>{
     const ch=normCh(r.ch);
-    return `<tr style="${isBad?'background:#FFF8F8':isGood?'background:#F0FFF8':''}">
-      <td class="tc">${rankIcon}</td>
-      <td><strong style="font-size:12px">${r.tl_name||r.tl_ldap||'—'}</strong><br><span style="font-size:9px;color:#aaa">${r.tl_ldap||''}</span></td>
-      <td style="font-size:11px;color:#777">${r.team.replace('BR_Buyers_','')}</td>
-      <td class="tc">${chTagHtml(ch)}</td>
-      <td><strong>${r.office}</strong></td>
-      <td class="tr">${f(r.nps)}%</td>
-      <td class="tr" style="color:#888">${f(r.target)}%</td>
-      <td class="tr"><span class="${r.gap_tgt>=0?'val-pos':r.gap_tgt>=-5?'val-wrn':'val-neg'}">${fpp(r.gap_tgt,true)}</span></td>
-      <td class="tr" style="color:#888">${r.enc.toLocaleString('pt-BR')}</td>
-    </tr>`;
-  }).join('');
+    const k=`${r.tl_ldap}||${r.team}||${ch}||${r.office}`;
+    if(!tlMap[k]) tlMap[k]={tl_ldap:r.tl_ldap,tl_name:r.tl_name,team:r.team,ch,office:r.office,_nps:0,_tgt:0,enc:0};
+    const m=tlMap[k];
+    m._nps+=r.nps*r.enc; m._tgt+=r.target*r.enc; m.enc+=r.enc;
+  });
+  let agg=Object.values(tlMap).map(m=>({...m,nps:m._nps/m.enc,target:m._tgt/m.enc,gap_tgt:m._nps/m.enc-m._tgt/m.enc}));
+  agg.sort((a,b)=>a.gap_tgt-b.gap_tgt);
+  const top10=agg.slice(0,10);
+
+  const trs=top10.map((r,i)=>`<tr style="background:#FFF8F8">
+    <td class="tc"><span class="outlier-rank rank-bad">${i+1}</span></td>
+    <td><strong style="font-size:12px">${r.tl_name||r.tl_ldap||'—'}</strong><br><span style="font-size:9px;color:#aaa">${r.tl_ldap||''}</span></td>
+    <td style="font-size:11px;color:#777">${r.team.replace('BR_Buyers_','')}</td>
+    <td class="tc">${chTagHtml(r.ch)}</td>
+    <td><strong>${r.office}</strong></td>
+    <td class="tr">${f(r.nps)}%</td>
+    <td class="tr" style="color:#888">${f(r.target)}%</td>
+    <td class="tr"><span class="${r.gap_tgt>=0?'val-pos':r.gap_tgt>=-5?'val-wrn':'val-neg'}">${fpp(r.gap_tgt,true)}</span></td>
+    <td class="tr" style="color:#888">${r.enc.toLocaleString('pt-BR')}</td>
+  </tr>`).join('');
 
   return `
   <div class="panel">
-    <div class="sec-title">Outliers por TL <span style="font-weight:400;font-size:10px;color:#aaa">semana ${DATES.wa} · mín. 5 enc.</span></div>
-    <div style="font-size:10px;color:#999;margin-bottom:12px">
-      Cada linha = 1 TL. Ordenado do pior GAP para o melhor.
-      <span class="outlier-rank rank-bad" style="display:inline-block;margin:0 4px">●</span>Piores
-      <span class="outlier-rank rank-good" style="display:inline-block;margin:0 4px">●</span>Melhores
-    </div>
-    <div style="overflow-x:auto">
-    <table>
+    <div class="sec-title">Outliers por TL — 10 mais ofensores <span style="font-weight:400;font-size:10px;color:#aaa">semana ${DATES.wa} · mín. 5 enc.</span></div>
+    ${filterBar}
+    <div style="overflow-x:auto"><table>
       <thead><tr>
-        <th class="tc"></th><th>TL</th><th>Time</th><th class="tc">Canal</th><th>Office</th>
+        <th class="tc">#</th><th>TL</th><th>Time</th><th class="tc">Canal</th><th>Office</th>
         <th class="tr">NPS</th><th class="tr">Target</th><th class="tr">GAP</th><th class="tr">Enc.</th>
       </tr></thead>
       <tbody>${trs}</tbody>
-    </table>
-    </div>
+    </table></div>
   </div>`;
 }
 
@@ -1378,46 +1474,39 @@ function renderRepOutlier(){
     return `<div class="panel">
       <div class="sec-title">Outliers por Rep (Individual)</div>
       <div style="text-align:center;padding:20px;color:#bbb;font-size:12px">
-        ⚠ Dados de rep não carregados — execute <code>python refresh_nps_data.py</code>.
-        <br><span style="font-size:10px;margin-top:4px;display:block">Se persistir, verifique se o campo <strong>USER_ID</strong> existe na tabela DM_CX_NPS_Y20_DETAIL.</span>
+        Dados não carregados — execute <code>python refresh_nps_data.py</code>.
       </div></div>`;
   }
 
-  const fOff=CROSS_FILTER.office, fTeam=CROSS_FILTER.team, fCh=CROSS_FILTER.canal;
-
   const latestW=[...new Set(src.map(r=>r.period))].sort().pop();
+  const filterBar=_buildOutlierFilters(src,REP_FILTER,'REP_FILTER');
+
   let rows=src.filter(r=>r.period===latestW&&r.nps!=null&&r.enc>=3);
-  if(fOff !=='ALL') rows=rows.filter(r=>r.office===fOff);
-  if(fCh  !=='ALL') rows=rows.filter(r=>normCh(r.ch)===fCh);
-  if(fTeam!=='ALL'){
-    const nm={pre:'BR_Buyers_Pre_Entrega',post:'BR_Buyers_Post_Entrega',compra:'BR_Buyers_Compra'};
-    rows=rows.filter(r=>r.team===nm[fTeam]);
-  }
-  if(!rows.length) return '';
+  if(REP_FILTER.team    !=='ALL'){const nm={pre:'BR_Buyers_Pre_Entrega',post:'BR_Buyers_Post_Entrega',compra:'BR_Buyers_Compra'};rows=rows.filter(r=>r.team===nm[REP_FILTER.team]);}
+  if(REP_FILTER.canal   !=='ALL') rows=rows.filter(r=>normCh(r.ch)===REP_FILTER.canal);
+  if(REP_FILTER.office  !=='ALL') rows=rows.filter(r=>r.office===REP_FILTER.office);
+  if(REP_FILTER.processo!=='ALL') rows=rows.filter(r=>r.processo===REP_FILTER.processo);
+
+  if(!rows.length) return `<div class="panel"><div class="sec-title">Outliers por Rep (Individual)</div>${filterBar}<div style="text-align:center;padding:12px;color:#aaa;font-size:12px">Sem dados para o filtro selecionado.</div></div>`;
 
   // calcula média do office+canal para Δ NPS
   const avgMap={};
   rows.forEach(r=>{
-    const ch=normCh(r.ch);
-    const k=`${r.office}||${ch}`;
+    const ch=normCh(r.ch); const k=`${r.office}||${ch}`;
     if(!avgMap[k]) avgMap[k]={s:0,e:0};
     avgMap[k].s+=r.nps*r.enc; avgMap[k].e+=r.enc;
   });
 
   rows=[...rows].map(r=>{
-    const ch=normCh(r.ch);
-    const k=`${r.office}||${ch}`;
+    const ch=normCh(r.ch); const k=`${r.office}||${ch}`;
     const avg=avgMap[k]?avgMap[k].s/avgMap[k].e:null;
     return {...r,ch,avg_nps:avg,dev:avg!=null?r.nps-avg:null};
   }).sort((a,b)=>a.gap_tgt-b.gap_tgt);
 
-  const n=rows.length;
-  const SHOW_SIDE=Math.min(10,Math.ceil(n/2));
-  const worst=rows.slice(0,SHOW_SIDE);
-  const best =rows.slice(Math.max(0,n-SHOW_SIDE));
-  const omitted=n-worst.length-best.length;
+  const top10=rows.slice(0,10);
 
-  const makeRow=(r,isBad,isGood)=>`<tr style="${isBad?'background:#FFF8F8':isGood?'background:#F0FFF8':''}">
+  const trs=top10.map((r,i)=>`<tr style="background:#FFF8F8">
+    <td class="tc"><span class="outlier-rank rank-bad">${i+1}</span></td>
     <td><strong style="font-size:12px">${r.rep_name||r.rep_ldap||'—'}</strong><br><span style="font-size:9px;color:#aaa">${r.rep_ldap||''}</span></td>
     <td style="font-size:11px;color:#777">${r.team.replace('BR_Buyers_','')}</td>
     <td class="tc">${chTagHtml(r.ch)}</td>
@@ -1426,33 +1515,22 @@ function renderRepOutlier(){
     <td class="tr">${f(r.nps)}%</td>
     <td class="tr" style="color:#888">${r.avg_nps!=null?f(r.avg_nps)+'%':'—'}</td>
     <td class="tr"><span class="${r.dev==null?'':r.dev>=0?'val-pos':r.dev>=-5?'val-wrn':'val-neg'}">${r.dev!=null?fpp(r.dev,true):'—'}</span></td>
-    <td class="tr"><span class="${r.gap_tgt>=0?'val-pos':r.gap_tgt>=-5?'val-wrn':'val-neg'}">${fpp(r.gap_tgt,true)}</span></td>
+    <td class="tr"><span class="val-neg">${fpp(r.gap_tgt,true)}</span></td>
     <td class="tr" style="color:#888">${r.enc.toLocaleString('pt-BR')}</td>
-  </tr>`;
-
-  const trs=[
-    ...worst.map(r=>makeRow(r,true,false)),
-    omitted>0?`<tr><td colspan="10" style="text-align:center;color:#ccc;font-size:10px;padding:8px 0">··· ${omitted} reps intermediários omitidos ···</td></tr>`:'',
-    ...best.map(r=>makeRow(r,false,true)),
-  ].join('');
+  </tr>`).join('');
 
   return `
   <div class="panel">
-    <div class="sec-title">Outliers por Rep (Individual) <span style="font-weight:400;font-size:10px;color:#aaa">semana ${DATES.wa} · mín. 3 enc./rep</span></div>
-    <div style="font-size:10px;color:#999;margin-bottom:12px">
-      Top ${SHOW_SIDE} reps com pior GAP e top ${SHOW_SIDE} com melhor GAP.
-      Δ NPS = NPS rep − média do office/canal.
-    </div>
-    <div style="overflow-x:auto">
-    <table>
+    <div class="sec-title">Outliers por Rep — 10 mais ofensores <span style="font-weight:400;font-size:10px;color:#aaa">semana ${DATES.wa} · mín. 3 enc./rep</span></div>
+    ${filterBar}
+    <div style="overflow-x:auto"><table>
       <thead><tr>
-        <th>Rep</th><th>Time</th><th class="tc">Canal</th><th>Office</th><th class="tc">Senior.</th>
+        <th class="tc">#</th><th>Rep</th><th>Time</th><th class="tc">Canal</th><th>Office</th><th class="tc">Senior.</th>
         <th class="tr">NPS Rep</th><th class="tr">Média Office</th><th class="tr">Δ NPS</th>
         <th class="tr">GAP_TGT</th><th class="tr">Enc.</th>
       </tr></thead>
       <tbody>${trs}</tbody>
-    </table>
-    </div>
+    </table></div>
   </div>`;
 }
 
