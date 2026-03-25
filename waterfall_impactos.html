@@ -835,15 +835,16 @@ function buildImpactSection(containerId, segs, opts={}) {
     const isNeg=s.gap<0;
     const rCls=rankCls(isNeg?negIdx++:99,isNeg);
     const label=opts.labelFn?opts.labelFn(s):s.key;
+    const oppRank=isNeg&&negIdx<=1?'🔥':isNeg&&negIdx<=3?'⚠️':'';
     const rowStyle=isNeg
-      ?'background:#FFF0F0;border-left:4px solid #F23D4F'
-      :'border-left:4px solid transparent';
+      ?'border-left:3px solid #F59E0B;border-bottom:1px solid #FEF3C7'
+      :'border-left:3px solid transparent';
     return `<tr style="${rowStyle}">
       <td style="width:28px;text-align:center">
         <span class="impact-rank ${rCls}" style="display:inline-flex">${i+1}</span>
       </td>
       <td style="min-width:140px;max-width:260px">
-        <div style="font-size:11px;font-weight:${isNeg?'700':'600'};color:${isNeg?'#222':'#555'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${isNeg?'🔴 ':''}${label}</div>
+        <div style="font-size:11px;font-weight:${isNeg?'700':'500'};color:${isNeg?'#1a1a1a':'#888'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${oppRank?`<span style="margin-right:4px">${oppRank}</span>`:''}${label}</div>
         <div style="margin-top:4px;background:#F0F0F0;border-radius:3px;height:5px;overflow:hidden;max-width:200px">
           <div style="height:100%;border-radius:3px;width:${bp}%" class="impact-bar ${barCls(s.gap)}"></div>
         </div>
