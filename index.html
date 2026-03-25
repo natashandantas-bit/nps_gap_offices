@@ -157,6 +157,21 @@ tr.ch-sub td  { padding-left: 24px; color: #555; }
   .sim-grid     { grid-template-columns: 1fr; }
 }
 
+/* CROSS FILTER BAR */
+.cross-filter-bar { background: #fff; border-radius: 10px; padding: 13px 20px; margin-bottom: 18px; display: flex; gap: 18px; flex-wrap: wrap; align-items: center; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+.filter-group { display: flex; align-items: center; gap: 7px; }
+.filter-group label { font-size: 11px; font-weight: 700; color: #666; white-space: nowrap; }
+
+/* SENIORITY */
+.sen-col-expert { background: #EBF3FF; }
+.sen-col-newbie { background: #FFF3E0; }
+
+/* OUTLIER RANK */
+.outlier-rank { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; font-size: 10px; font-weight: 800; }
+.rank-bad  { background: #FEECEF; color: #F23D4F; }
+.rank-good { background: #E6F9F1; color: #00A650; }
+.rank-mid  { background: #F5F5F5; color: #999; }
+
 /* IMPORT MODAL */
 .import-overlay { position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:500; display:none; align-items:center; justify-content:center; }
 .import-overlay.open { display:flex; }
@@ -237,16 +252,10 @@ tr.ch-sub td  { padding-left: 24px; color: #555; }
 </div>
 
 <div class="tabs-bar">
-  <button class="tab-btn active" onclick="switchTab('cross')">🌐 Cross</button>
-  <button class="tab-btn" onclick="switchTab('pre')">BR_Buyers_Pre_Entrega</button>
-  <button class="tab-btn" onclick="switchTab('post')">BR_Buyers_Post_Entrega</button>
-  <button class="tab-btn" onclick="switchTab('compra')">BR_Buyers_Compra</button>
+  <button class="tab-btn active">🌐 Cross — Todos os Times</button>
 </div>
 
-<div id="tab-cross"  class="tab-content active"><div class="page" id="page-cross"></div></div>
-<div id="tab-pre"    class="tab-content"><div class="page" id="page-pre"></div></div>
-<div id="tab-post"   class="tab-content"><div class="page" id="page-post"></div></div>
-<div id="tab-compra" class="tab-content"><div class="page" id="page-compra"></div></div>
+<div id="tab-cross" class="tab-content active"><div class="page" id="page-cross"></div></div>
 
 <script>
 Chart.register(ChartDataLabels);
@@ -335,19 +344,46 @@ let teams = {
 };
 
 // ─────────────────────────────────────────
-// CROSS
+// CROSS FILTER STATE
+// ─────────────────────────────────────────
+const CROSS_FILTER = { office:'ALL', team:'ALL', canal:'ALL' };
+
+// ─────────────────────────────────────────
+// CROSS (com filtros opcionais)
 // ─────────────────────────────────────────
 function buildCross() {
-  const all = [teams.pre, teams.post, teams.compra];
-  const enc_a  = all.reduce((s,t)=>s+t.enc_a,0);
-  const enc_b  = all.reduce((s,t)=>s+t.enc_b,0);
-  const nps_a  = all.reduce((s,t)=>s+t.nps_a*t.enc_a,0)/enc_a;
-  const nps_b  = all.reduce((s,t)=>s+t.nps_b*t.enc_b,0)/enc_b;
-  const target = all.reduce((s,t)=>s+t.target*t.enc_a,0)/enc_a;
+  const fOff  = CROSS_FILTER.office;
+  const fTeam = CROSS_FILTER.team;
+  const fCh   = CROSS_FILTER.canal;
 
-  // Aggregate o+ch (only offices with current-week data)
+  let all = [teams.pre, teams.post, teams.compra];
+  if(fTeam !== 'ALL'){
+    const nm = {pre:'BR_Buyers_Pre_Entrega',post:'BR_Buyers_Post_Entrega',compra:'BR_Buyers_Compra'};
+    all = all.filter(t=>t.name===nm[fTeam]);
+  }
+
+  const activeOffices = all.flatMap(t=>t.offices).filter(r=>{
+    if(!r.enc_a || r.nps_a==null) return false;
+    if(fOff !== 'ALL' && r.o !== fOff) return false;
+    if(fCh  !== 'ALL' && r.ch !== fCh) return false;
+    return true;
+  });
+
+  if(!activeOffices.length){
+    const gap=0;
+    return {name:'Cross — sem dados',enc_a:0,enc_b:0,nps_a:0,nps_b:null,target:0,nps_m:0,enc_m:0,offices:[],cdus:[],hallazgos:[],accoes:[]};
+  }
+
+  const enc_a  = activeOffices.reduce((s,r)=>s+r.enc_a,0);
+  const nps_a  = activeOffices.reduce((s,r)=>s+r.nps_a*r.enc_a,0)/enc_a;
+  const target = activeOffices.reduce((s,r)=>s+r.target*r.enc_a,0)/enc_a;
+  const bOffs  = activeOffices.filter(r=>r.nps_b!=null);
+  const enc_b  = bOffs.reduce((s,r)=>s+r.enc_b,0)||1;
+  const nps_b  = bOffs.length ? bOffs.reduce((s,r)=>s+(r.nps_b||0)*r.enc_b,0)/enc_b : null;
+
+  // Aggregate o+ch weighted
   const map = {};
-  all.flatMap(t=>t.offices).filter(r=>r.enc_a>0&&r.nps_a!=null).forEach(r => {
+  activeOffices.forEach(r => {
     const k = r.o+'||'+r.ch;
     if(!map[k]) map[k]={o:r.o,ch:r.ch,ea:0,eb:0,em:0,_na:0,_nb:0,_nm:0,_tgt:0,
       gap_months:Array(MONTHS.length).fill(null), _gm_ea:Array(MONTHS.length).fill(0),
@@ -356,7 +392,6 @@ function buildCross() {
     m._na+=r.nps_a*r.enc_a; m.ea+=r.enc_a; m._tgt+=r.target*r.enc_a;
     if(r.nps_b!=null){m._nb+=r.nps_b*r.enc_b; m.eb+=r.enc_b;}
     if(r.nps_m!=null){m._nm+=r.nps_m*r.enc_m; m.em+=r.enc_m;}
-    // aggregate gap_months weighted
     r.gap_months.forEach((g,i)=>{ if(g!=null){ m.gap_months[i]=(m.gap_months[i]||0)+g*r.enc_months[i]; m._gm_ea[i]+=r.enc_months[i]; m.enc_months[i]+=r.enc_months[i]; }});
   });
   const offices = Object.values(map).map(m=>({
@@ -369,35 +404,99 @@ function buildCross() {
 
   // CDUs agregados
   const cduMap = {};
-  all.flatMap(t=>t.cdus).forEach(r=>{
-    const k=r.cdu+'||'+r.sub+'||'+r.sol+'||'+r.ch;
+  all.flatMap(t=>t.cdus||[]).forEach(r=>{
+    if(!r.enc_a) return;
+    const k=r.cdu+'||'+r.ch;
     if(!cduMap[k]) cduMap[k]={...r,_na:0,_nm:0,_tgt:0,ea:0,em:0,det:0};
     const m=cduMap[k];
-    m._na+=r.nps_a*r.enc_a; m._nm+=r.nps_m*r.enc_m; m._tgt+=r.target*r.enc_a;
-    m.ea+=r.enc_a; m.em+=r.enc_m; m.det+=r.det_a;
+    if(r.nps_a!=null){m._na+=r.nps_a*r.enc_a; m.ea+=r.enc_a;}
+    if(r.nps_m!=null){m._nm+=r.nps_m*(r.enc_m||0); m.em+=(r.enc_m||0);}
+    m._tgt+=r.target*r.enc_a; m.det+=r.det_a||0;
   });
-  const cdus = Object.values(cduMap).map(m=>({
+  const cdus = Object.values(cduMap).filter(m=>m.ea>0).map(m=>({
     cdu:m.cdu, sub:m.sub, sol:m.sol, ch:m.ch,
-    nps_a:m._na/m.ea, nps_m:m._nm/m.em, target:m._tgt/m.ea,
+    nps_a:m._na/m.ea, nps_m:m.em>0?m._nm/m.em:null, target:m._tgt/m.ea,
     enc_a:m.ea, enc_m:m.em, det_a:m.det,
   }));
 
+  const gap=nps_a-target;
+  const teamLabel = fTeam!=='ALL' ? all[0]?.name||'Cross' : 'Cross — Todos os Times';
   return {
-    name:'Cross — Todos os Times', enc_a, enc_b, nps_a, nps_b, target,
-    nps_m:nps_a, enc_m:enc_a,  // fallback for renders that still read nps_m
+    name:teamLabel, enc_a, enc_b, nps_a, nps_b, target,
+    nps_m:nps_a, enc_m:enc_a,
     offices, cdus,
     hallazgos:[
-      { b:'Visão cross:',              d:` NPS ${f(nps_a)}% vs target ${f(target)}% — GAP ${fpp(nps_a-target,true)}.` },
+      { b:'Visão cross:',              d:` NPS ${f(nps_a)}% vs target ${f(target)}% — GAP ${fpp(gap,true)}.` },
       { b:'OFFLINE dispersão elevada:',d:` padrão estrutural em todos os times — plano de ação necessário.` },
       { b:'C2C uniforme:',             d:` spread < 1 pp em todos os times — canal muito padronizado.` },
-      { b:'ATE-CHAT crítico cross:',   d:` pior segmento transversal em PRE — ação coordenada urgente.` },
     ],
     accoes:[
       { b:'Programa OFFLINE cross:',   d:` plano unificado para reduzir dispersão no canal OFFLINE.` },
       { b:'Benchmark AEC-CHAT:',       d:` exportar boas práticas do melhor office+canal para os demais.` },
-      { b:'CDU PNR OFFLINE:',          d:` maior oportunidade cross — revisão de processo de mediação.` },
     ],
   };
+}
+
+// ── FILTER BAR ────────────────────────────────────────────────────────────────
+function renderFilterBar(){
+  const allOffices=[...new Set([teams.pre,teams.post,teams.compra].flatMap(t=>t.offices).map(o=>o.o))].sort();
+  const offOpts=allOffices.map(o=>`<option value="${o}"${CROSS_FILTER.office===o?' selected':''}>${o}</option>`).join('');
+  const teamOpts=[['pre','Pre Entrega'],['post','Post Entrega'],['compra','Compra']]
+    .map(([k,n])=>`<option value="${k}"${CROSS_FILTER.team===k?' selected':''}>${n}</option>`).join('');
+  const chOpts=[[CH.C2C,'C2C'],[CH.CHAT,'CHAT'],[CH.OFL,'OFFLINE']]
+    .map(([k,n])=>`<option value="${k}"${CROSS_FILTER.canal===k?' selected':''}>${n}</option>`).join('');
+  const hasFilter=CROSS_FILTER.office!=='ALL'||CROSS_FILTER.team!=='ALL'||CROSS_FILTER.canal!=='ALL';
+  return `
+  <div class="cross-filter-bar">
+    <span style="font-size:11px;font-weight:800;color:#555;letter-spacing:.4px;text-transform:uppercase">🔍 Filtrar</span>
+    <div class="filter-group">
+      <label>Office</label>
+      <select class="fsel" onchange="CROSS_FILTER.office=this.value;renderCross()">
+        <option value="ALL"${CROSS_FILTER.office==='ALL'?' selected':''}>Todos</option>${offOpts}
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Time</label>
+      <select class="fsel" onchange="CROSS_FILTER.team=this.value;renderCross()">
+        <option value="ALL"${CROSS_FILTER.team==='ALL'?' selected':''}>Todos</option>${teamOpts}
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Canal</label>
+      <select class="fsel" onchange="CROSS_FILTER.canal=this.value;renderCross()">
+        <option value="ALL"${CROSS_FILTER.canal==='ALL'?' selected':''}>Todos</option>${chOpts}
+      </select>
+    </div>
+    ${hasFilter?`<button class="btn-sec" style="font-size:11px;padding:5px 14px" onclick="CROSS_FILTER.office='ALL';CROSS_FILTER.team='ALL';CROSS_FILTER.canal='ALL';renderCross()">✕ Limpar</button>`:''}
+  </div>`;
+}
+
+// ── RENDER CROSS ──────────────────────────────────────────────────────────────
+function renderCross(){
+  const cross=buildCross();
+  const sim=calcSim(cross);
+  const aggOff=aggByOffice(cross.offices);
+  const sorted=[...aggOff].sort((a,b)=>b.nps_a-a.nps_a);
+  const gap=cross.nps_a-cross.target;
+  const wow=cross.nps_b!=null?cross.nps_a-cross.nps_b:null;
+  const page=document.getElementById('page-cross');
+  page.innerHTML=`
+    ${renderFilterBar()}
+    ${renderHeader(cross,gap,wow)}
+    ${renderSpreadByCanal(cross)}
+    ${renderOfficeCards(cross,aggOff,sorted)}
+    ${renderBarSection(cross,'cross')}
+    ${renderWoWTable(cross,aggOff)}
+    ${renderSim(cross,sim,'cross')}
+    ${renderInsights(cross)}
+    ${renderSeniority()}
+    ${renderTLOutlier()}
+    ${renderRepOutlier()}
+    ${renderCDU(cross,'cross')}
+  `;
+  drawBarChart('chart_bar_cross',cross);
+  drawSimChart('chart_sim_cross',cross,sim);
+  bindCduFilter('cross',cross);
 }
 
 // ─────────────────────────────────────────
@@ -1107,11 +1206,260 @@ function buildCdusFromProcess(procData, teamName){
 }
 
 // ─────────────────────────────────────────
-function switchTab(tabId){
-  ['cross','pre','post','compra'].forEach((id,i)=>{
-    document.querySelectorAll('.tab-btn')[i].classList.toggle('active',id===tabId);
-    document.getElementById(`tab-${id}`).classList.toggle('active',id===tabId);
+// HELPER: normaliza canal vindo do BQ para CH.*
+// ─────────────────────────────────────────
+function normCh(raw){
+  if(!raw) return CH.OFL;
+  const u=raw.toUpperCase();
+  if(u==='C2C'||u.includes('C2C')) return CH.C2C;
+  if(u==='CHAT'||u.includes('CHAT')) return CH.CHAT;
+  return CH.OFL;
+}
+
+// ─────────────────────────────────────────
+// ABERTURA POR SENIORIDADE
+// ─────────────────────────────────────────
+function renderSeniority(){
+  const src = window.NPS_SENIORITY_DATA;
+  if(!src||!src.length){
+    return `<div class="panel">
+      <div class="sec-title">Abertura por Senioridade — EXPERT vs NEWBIE</div>
+      <div style="text-align:center;padding:20px;color:#bbb;font-size:12px">
+        ⚠ Dados de senioridade não carregados — execute <code>python refresh_nps_data.py</code>.
+      </div></div>`;
+  }
+
+  const fOff=CROSS_FILTER.office, fTeam=CROSS_FILTER.team, fCh=CROSS_FILTER.canal;
+
+  // pega período semanal mais recente
+  const wRows=src.filter(r=>r.tipo==='SEMANA');
+  if(!wRows.length) return '';
+  const latestW=[...new Set(wRows.map(r=>r.period))].sort().pop();
+
+  let rows=wRows.filter(r=>r.period===latestW);
+  if(fOff !=='ALL') rows=rows.filter(r=>r.office===fOff);
+  if(fCh  !=='ALL') rows=rows.filter(r=>normCh(r.ch)===fCh);
+  if(fTeam!=='ALL'){
+    const nm={pre:'BR_Buyers_Pre_Entrega',post:'BR_Buyers_Post_Entrega',compra:'BR_Buyers_Compra'};
+    rows=rows.filter(r=>r.team===nm[fTeam]);
+  }
+  if(!rows.length) return '';
+
+  // pivot: key=team||ch||office → { expert, newbie }
+  const pivot={};
+  rows.forEach(r=>{
+    const ch=normCh(r.ch);
+    const k=`${r.team}||${ch}||${r.office}`;
+    if(!pivot[k]) pivot[k]={team:r.team,ch,office:r.office,expert:null,newbie:null};
+    const d={nps:r.nps,gap:r.gap_tgt,enc:r.enc,target:r.target};
+    if(r.seniority==='EXPERT') pivot[k].expert=d;
+    else                        pivot[k].newbie=d;
   });
+
+  const rows2=Object.values(pivot).filter(p=>p.expert&&p.newbie);
+  if(!rows2.length) return '';
+
+  // ordenar: maior Δ absoluto primeiro (newbie mais defasado do expert)
+  rows2.sort((a,b)=>Math.abs(b.expert.gap-b.newbie.gap)-Math.abs(a.expert.gap-a.newbie.gap));
+
+  const trs=rows2.map(p=>{
+    const delta=p.expert.gap-p.newbie.gap; // positivo = expert melhor que newbie (esperado)
+    return `<tr>
+      <td style="font-size:11px;color:#888">${p.team.replace('BR_Buyers_','')}</td>
+      <td class="tc">${chTagHtml(p.ch)}</td>
+      <td><strong>${p.office}</strong></td>
+      <td class="tr sen-col-expert">${f(p.expert.nps)}%</td>
+      <td class="tr sen-col-expert"><span class="${p.expert.gap>=0?'val-pos':p.expert.gap>=-5?'val-wrn':'val-neg'}">${fpp(p.expert.gap,true)}</span></td>
+      <td class="tr sen-col-expert" style="color:#888">${p.expert.enc.toLocaleString('pt-BR')}</td>
+      <td class="tr sen-col-newbie">${f(p.newbie.nps)}%</td>
+      <td class="tr sen-col-newbie"><span class="${p.newbie.gap>=0?'val-pos':p.newbie.gap>=-5?'val-wrn':'val-neg'}">${fpp(p.newbie.gap,true)}</span></td>
+      <td class="tr sen-col-newbie" style="color:#888">${p.newbie.enc.toLocaleString('pt-BR')}</td>
+      <td class="tr"><strong class="${delta>2?'val-pos':delta<-2?'val-neg':'val-wrn'}">${fpp(delta,true)}</strong></td>
+    </tr>`;
+  }).join('');
+
+  return `
+  <div class="panel">
+    <div class="sec-title">Abertura por Senioridade — EXPERT vs NEWBIE <span style="font-weight:400;font-size:10px;color:#aaa">semana ${DATES.wa}</span></div>
+    <div style="font-size:10px;color:#999;margin-bottom:12px">Δ GAP = GAP Expert − GAP Newbie. Positivo = Expert acima do Newbie (esperado). Negativo = inversão de senioridade (alerta de calibração).</div>
+    <div style="overflow-x:auto">
+    <table>
+      <thead><tr>
+        <th>Time</th><th class="tc">Canal</th><th>Office</th>
+        <th class="tr sen-col-expert" style="color:#1565C0">NPS Expert</th>
+        <th class="tr sen-col-expert" style="color:#1565C0">GAP Expert</th>
+        <th class="tr sen-col-expert" style="color:#1565C0">Enc.</th>
+        <th class="tr sen-col-newbie" style="color:#E65100">NPS Newbie</th>
+        <th class="tr sen-col-newbie" style="color:#E65100">GAP Newbie</th>
+        <th class="tr sen-col-newbie" style="color:#E65100">Enc.</th>
+        <th class="tr">Δ GAP</th>
+      </tr></thead>
+      <tbody>${trs}</tbody>
+    </table>
+    </div>
+  </div>`;
+}
+
+// ─────────────────────────────────────────
+// TL OUTLIER
+// ─────────────────────────────────────────
+function renderTLOutlier(){
+  const src=window.NPS_TEAM_DATA;
+  if(!src||!src.length){
+    return `<div class="panel">
+      <div class="sec-title">Outliers por Time (TL Level)</div>
+      <div style="text-align:center;padding:20px;color:#bbb;font-size:12px">
+        ⚠ Dados de TL não carregados — execute <code>python refresh_nps_data.py</code>.
+      </div></div>`;
+  }
+
+  const fOff=CROSS_FILTER.office, fTeam=CROSS_FILTER.team, fCh=CROSS_FILTER.canal;
+
+  const latestW=[...new Set(src.map(r=>r.period))].sort().pop();
+  let rows=src.filter(r=>r.period===latestW&&r.nps!=null&&r.enc>=5);
+  if(fOff !=='ALL') rows=rows.filter(r=>r.office===fOff);
+  if(fCh  !=='ALL') rows=rows.filter(r=>normCh(r.ch)===fCh);
+  if(fTeam!=='ALL'){
+    const nm={pre:'BR_Buyers_Pre_Entrega',post:'BR_Buyers_Post_Entrega',compra:'BR_Buyers_Compra'};
+    rows=rows.filter(r=>r.team===nm[fTeam]);
+  }
+  if(!rows.length) return '';
+
+  rows=[...rows].sort((a,b)=>a.gap_tgt-b.gap_tgt); // pior → melhor
+  const n=rows.length;
+  const topN=Math.min(3,Math.ceil(n*0.2));
+
+  const trs=rows.map((r,i)=>{
+    const isBad =i<topN;
+    const isGood=i>=n-topN;
+    const rankIcon=isBad ?`<span class="outlier-rank rank-bad">${i+1}</span>`:
+                   isGood?`<span class="outlier-rank rank-good">▲</span>`:
+                          `<span class="outlier-rank rank-mid">${i+1}</span>`;
+    const ch=normCh(r.ch);
+    return `<tr style="${isBad?'background:#FFF8F8':isGood?'background:#F0FFF8':''}">
+      <td class="tc">${rankIcon}</td>
+      <td style="font-size:10px;font-family:monospace;color:#888">${r.team_id}</td>
+      <td style="font-size:11px;color:#777">${r.team.replace('BR_Buyers_','')}</td>
+      <td class="tc">${chTagHtml(ch)}</td>
+      <td><strong>${r.office}</strong></td>
+      <td class="tr">${f(r.nps)}%</td>
+      <td class="tr" style="color:#888">${f(r.target)}%</td>
+      <td class="tr"><span class="${r.gap_tgt>=0?'val-pos':r.gap_tgt>=-5?'val-wrn':'val-neg'}">${fpp(r.gap_tgt,true)}</span></td>
+      <td class="tr" style="color:#888">${r.enc.toLocaleString('pt-BR')}</td>
+    </tr>`;
+  }).join('');
+
+  return `
+  <div class="panel">
+    <div class="sec-title">Outliers por Time (TL Level) <span style="font-weight:400;font-size:10px;color:#aaa">semana ${DATES.wa} · mín. 5 enc./time</span></div>
+    <div style="font-size:10px;color:#999;margin-bottom:12px">
+      Cada linha = 1 USER_TEAM_ID (≈ 1 squad de TL). Ordenado do pior GAP para o melhor.
+      <span class="outlier-rank rank-bad" style="display:inline-block;margin:0 4px">●</span>Piores
+      <span class="outlier-rank rank-good" style="display:inline-block;margin:0 4px">●</span>Melhores
+    </div>
+    <div style="overflow-x:auto">
+    <table>
+      <thead><tr>
+        <th class="tc"></th><th>Team ID</th><th>Time</th><th class="tc">Canal</th><th>Office</th>
+        <th class="tr">NPS</th><th class="tr">Target</th><th class="tr">GAP</th><th class="tr">Enc.</th>
+      </tr></thead>
+      <tbody>${trs}</tbody>
+    </table>
+    </div>
+  </div>`;
+}
+
+// ─────────────────────────────────────────
+// REP OUTLIER
+// ─────────────────────────────────────────
+function renderRepOutlier(){
+  const src=window.NPS_REP_DATA;
+  if(!src||!src.length){
+    return `<div class="panel">
+      <div class="sec-title">Outliers por Rep (Individual)</div>
+      <div style="text-align:center;padding:20px;color:#bbb;font-size:12px">
+        ⚠ Dados de rep não carregados — execute <code>python refresh_nps_data.py</code>.
+        <br><span style="font-size:10px;margin-top:4px;display:block">Se persistir, verifique se o campo <strong>USER_ID</strong> existe na tabela DM_CX_NPS_Y20_DETAIL.</span>
+      </div></div>`;
+  }
+
+  const fOff=CROSS_FILTER.office, fTeam=CROSS_FILTER.team, fCh=CROSS_FILTER.canal;
+
+  const latestW=[...new Set(src.map(r=>r.period))].sort().pop();
+  let rows=src.filter(r=>r.period===latestW&&r.nps!=null&&r.enc>=3);
+  if(fOff !=='ALL') rows=rows.filter(r=>r.office===fOff);
+  if(fCh  !=='ALL') rows=rows.filter(r=>normCh(r.ch)===fCh);
+  if(fTeam!=='ALL'){
+    const nm={pre:'BR_Buyers_Pre_Entrega',post:'BR_Buyers_Post_Entrega',compra:'BR_Buyers_Compra'};
+    rows=rows.filter(r=>r.team===nm[fTeam]);
+  }
+  if(!rows.length) return '';
+
+  // calcula média do office+canal para Δ NPS
+  const avgMap={};
+  rows.forEach(r=>{
+    const ch=normCh(r.ch);
+    const k=`${r.office}||${ch}`;
+    if(!avgMap[k]) avgMap[k]={s:0,e:0};
+    avgMap[k].s+=r.nps*r.enc; avgMap[k].e+=r.enc;
+  });
+
+  rows=[...rows].map(r=>{
+    const ch=normCh(r.ch);
+    const k=`${r.office}||${ch}`;
+    const avg=avgMap[k]?avgMap[k].s/avgMap[k].e:null;
+    return {...r,ch,avg_nps:avg,dev:avg!=null?r.nps-avg:null};
+  }).sort((a,b)=>a.gap_tgt-b.gap_tgt);
+
+  const n=rows.length;
+  const SHOW_SIDE=Math.min(10,Math.ceil(n/2));
+  const worst=rows.slice(0,SHOW_SIDE);
+  const best =rows.slice(Math.max(0,n-SHOW_SIDE));
+  const omitted=n-worst.length-best.length;
+
+  const makeRow=(r,isBad,isGood)=>`<tr style="${isBad?'background:#FFF8F8':isGood?'background:#F0FFF8':''}">
+    <td style="font-size:10px;font-family:monospace;color:#666">${r.rep_id}</td>
+    <td style="font-size:11px;color:#777">${r.team.replace('BR_Buyers_','')}</td>
+    <td class="tc">${chTagHtml(r.ch)}</td>
+    <td><strong>${r.office}</strong></td>
+    <td class="tc"><span class="pill ${r.seniority==='EXPERT'?'pill-p':'pill-w'}" style="font-size:9px">${r.seniority}</span></td>
+    <td class="tr">${f(r.nps)}%</td>
+    <td class="tr" style="color:#888">${r.avg_nps!=null?f(r.avg_nps)+'%':'—'}</td>
+    <td class="tr"><span class="${r.dev==null?'':r.dev>=0?'val-pos':r.dev>=-5?'val-wrn':'val-neg'}">${r.dev!=null?fpp(r.dev,true):'—'}</span></td>
+    <td class="tr"><span class="${r.gap_tgt>=0?'val-pos':r.gap_tgt>=-5?'val-wrn':'val-neg'}">${fpp(r.gap_tgt,true)}</span></td>
+    <td class="tr" style="color:#888">${r.enc.toLocaleString('pt-BR')}</td>
+  </tr>`;
+
+  const trs=[
+    ...worst.map(r=>makeRow(r,true,false)),
+    omitted>0?`<tr><td colspan="10" style="text-align:center;color:#ccc;font-size:10px;padding:8px 0">··· ${omitted} reps intermediários omitidos ···</td></tr>`:'',
+    ...best.map(r=>makeRow(r,false,true)),
+  ].join('');
+
+  return `
+  <div class="panel">
+    <div class="sec-title">Outliers por Rep (Individual) <span style="font-weight:400;font-size:10px;color:#aaa">semana ${DATES.wa} · mín. 3 enc./rep</span></div>
+    <div style="font-size:10px;color:#999;margin-bottom:12px">
+      Top ${SHOW_SIDE} reps com pior GAP e top ${SHOW_SIDE} com melhor GAP.
+      Δ NPS = NPS rep − média do office/canal.
+    </div>
+    <div style="overflow-x:auto">
+    <table>
+      <thead><tr>
+        <th>Rep ID</th><th>Time</th><th class="tc">Canal</th><th>Office</th><th class="tc">Senior.</th>
+        <th class="tr">NPS Rep</th><th class="tr">Média Office</th><th class="tr">Δ NPS</th>
+        <th class="tr">GAP_TGT</th><th class="tr">Enc.</th>
+      </tr></thead>
+      <tbody>${trs}</tbody>
+    </table>
+    </div>
+  </div>`;
+}
+
+// ─────────────────────────────────────────
+function switchTab(tabId){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active',true));
+  document.getElementById('tab-cross').classList.add('active');
 }
 
 window.addEventListener('DOMContentLoaded',()=>{
@@ -1125,7 +1473,6 @@ window.addEventListener('DOMContentLoaded',()=>{
         if(built.teams[tk]) Object.assign(teams[tk], built.teams[tk], STATIC[tk]||{});
       });
     }
-    // ── constrói CDUs a partir de NPS_PROCESS_DATA (PRO_PROCESS_NAME) ──────
     if(window.NPS_PROCESS_DATA && window.NPS_PROCESS_DATA.length){
       ['pre','post','compra'].forEach(tk=>{
         teams[tk].cdus = buildCdusFromProcess(window.NPS_PROCESS_DATA, teams[tk].name);
@@ -1136,16 +1483,12 @@ window.addEventListener('DOMContentLoaded',()=>{
       '<div style="background:#F23D4F;color:#fff;padding:10px 24px;font-size:13px;font-weight:700;'+
       'text-align:center;position:sticky;top:48px;z-index:200">'+
       '⚠ Dados não carregados — execute <code style="background:rgba(0,0,0,.25);padding:1px 7px;border-radius:3px">'+
-      'python refresh_nps_data.py</code> na pasta Downloads e reabra este arquivo.</div>');
+      'python refresh_nps_data.py</code> e reabra este arquivo.</div>');
   }
-  // ────────────────────────────────────────────────────────────────────────
   runEnrich();
   document.getElementById('topbar-period').textContent=
     DATES.wa && DATES.wa!=='—' ? `${DATES.wa}/${DATES.year}` : 'Sem dados';
-  renderTeam(buildCross(),'page-cross');
-  renderTeam(teams.pre,   'page-pre');
-  renderTeam(teams.post,  'page-post');
-  renderTeam(teams.compra,'page-compra');
+  renderCross();
 });
 
 // ─────────────────────────────────────────

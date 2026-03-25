@@ -2,7 +2,7 @@
 """
 refresh_nps_data.py
 Executa queries de NPS no BigQuery e gera data.js com os dados atualizados.
-Coloque este script na mesma pasta que nps_gap_offices.html e execute:
+Coloque este script na mesma pasta que index.html e execute:
     python refresh_nps_data.py
 Pré-requisito:  pip install google-cloud-bigquery
 Autenticação:   gcloud auth application-default login
@@ -19,7 +19,7 @@ REPO_DIR    = os.path.dirname(os.path.abspath(__file__))
 OUTPUT_FILE = os.path.join(REPO_DIR, "data.js")
 GIT         = r"C:\Users\bhase\AppData\Local\Programs\Git\bin\git.exe"
 
-# ── CTE BASE (reutilizada nas duas queries) ───────────────────────────────────
+# ── CTE BASE (reutilizada em todas as queries) ─────────────────────────────────
 BASE_CTE = """
 WITH BASE_NPS_Y20_DETAIL AS (
   SELECT
@@ -28,6 +28,7 @@ WITH BASE_NPS_Y20_DETAIL AS (
     IF(NP.USER_TEAM_ID = 2352, 'C2C', NP.USER_TEAM_CHANNEL) AS USER_TEAM_CHANNEL,
     NP.USER_OFFICE,
     NP.PRO_PROCESS_NAME,
+    NP.ANTIGUEDAD_REP,
     NP.RES_END_DATE,
     NP.NPS,
     NP.SURVEY_TARGET_VALUE,
@@ -53,7 +54,7 @@ WITH BASE_NPS_Y20_DETAIL AS (
 )
 """
 
-# ── QUERY 1: agrupamento por office (para tabelas e gráficos de office) ───────
+# ── QUERY 1: agrupamento por office ───────────────────────────────────────────
 QUERY_OFFICE = BASE_CTE + """
 SELECT
   NP.USER_TEAM_NAME,
@@ -89,7 +90,7 @@ GROUP BY 1, 2, 3, 4, 5
 ORDER BY 1, 2, 3, 4
 """
 
-# ── QUERY 2: agrupamento por PRO_PROCESS_NAME (para tabela CDU) ───────────────
+# ── QUERY 2: agrupamento por PRO_PROCESS_NAME (CDU) ───────────────────────────
 QUERY_PROCESS = BASE_CTE + """
 SELECT
   NP.USER_TEAM_NAME,
@@ -127,7 +128,96 @@ GROUP BY 1, 2, 3, 4, 5
 ORDER BY 1, 2, 3, 4
 """
 
+# ── QUERY 3: abertura por senioridade (EXPERT vs NEWBIE) ──────────────────────
+QUERY_SENIORITY = BASE_CTE + """
+SELECT
+  NP.USER_TEAM_NAME,
+  NP.USER_TEAM_CHANNEL,
+  NP.USER_OFFICE,
+  NP.ANTIGUEDAD_REP                                              AS SENIORITY,
+  FORMAT_DATE('%Y-%m-%d', DATE_TRUNC(NP.RES_END_DATE, MONTH))   AS PERIODO,
+  'MES'                                                           AS TIPO,
+  COUNT(*)                                                        AS ENCUESTAS,
+  ROUND(AVG(NP.GAP_TGT) * 100, 2)                               AS GAP_TGT,
+  ROUND((SUM(NP.PROMOTER) - SUM(NP.DETRACTOR)) * 100.0
+        / NULLIF(COUNT(*), 0), 2)                                AS NPS,
+  ROUND(AVG(NP.SURVEY_TARGET_VALUE) * 100, 2)                   AS TARGET
+FROM BASE_NPS_Y20_DETAIL NP
+GROUP BY 1, 2, 3, 4, 5, 6
+
+UNION ALL
+
+SELECT
+  NP.USER_TEAM_NAME,
+  NP.USER_TEAM_CHANNEL,
+  NP.USER_OFFICE,
+  NP.ANTIGUEDAD_REP,
+  FORMAT_DATE('%Y-%m-%d', DATE_TRUNC(NP.RES_END_DATE, ISOWEEK)) AS PERIODO,
+  'SEMANA'                                                        AS TIPO,
+  COUNT(*)                                                        AS ENCUESTAS,
+  ROUND(AVG(NP.GAP_TGT) * 100, 2)                               AS GAP_TGT,
+  ROUND((SUM(NP.PROMOTER) - SUM(NP.DETRACTOR)) * 100.0
+        / NULLIF(COUNT(*), 0), 2)                                AS NPS,
+  ROUND(AVG(NP.SURVEY_TARGET_VALUE) * 100, 2)                   AS TARGET
+FROM BASE_NPS_Y20_DETAIL NP
+WHERE DATE_TRUNC(NP.RES_END_DATE, ISOWEEK) >= DATE_SUB(CURRENT_DATE(), INTERVAL 3 WEEK)
+GROUP BY 1, 2, 3, 4, 5, 6
+
+ORDER BY 1, 2, 3, 4, 5
+"""
+
+# ── QUERY 4: nível TL (agrupado por USER_TEAM_ID — cada team = ~1 TL) ─────────
+QUERY_TEAM = BASE_CTE + """
+SELECT
+  CAST(NP.USER_TEAM_ID AS STRING)                                AS TEAM_ID,
+  NP.USER_TEAM_NAME,
+  NP.USER_TEAM_CHANNEL,
+  NP.USER_OFFICE,
+  FORMAT_DATE('%Y-%m-%d', DATE_TRUNC(NP.RES_END_DATE, ISOWEEK)) AS PERIODO,
+  'SEMANA'                                                        AS TIPO,
+  COUNT(*)                                                        AS ENCUESTAS,
+  ROUND(AVG(NP.GAP_TGT) * 100, 2)                               AS GAP_TGT,
+  ROUND((SUM(NP.PROMOTER) - SUM(NP.DETRACTOR)) * 100.0
+        / NULLIF(COUNT(*), 0), 2)                                AS NPS,
+  ROUND(AVG(NP.SURVEY_TARGET_VALUE) * 100, 2)                   AS TARGET
+FROM BASE_NPS_Y20_DETAIL NP
+WHERE DATE_TRUNC(NP.RES_END_DATE, ISOWEEK) >= DATE_SUB(CURRENT_DATE(), INTERVAL 1 WEEK)
+GROUP BY 1, 2, 3, 4, 5, 6
+
+ORDER BY 4, 3, 2, 1
+"""
+
+# ── QUERY 5: nível REP individual (USER_ID) ────────────────────────────────────
+# ATENÇÃO: verifique se o campo USER_ID existe na tabela DM_CX_NPS_Y20_DETAIL.
+# Se não existir, substitua por AGENT_ID, USER_PLATFORM_ID ou similar.
+QUERY_REP = BASE_CTE + """
+SELECT
+  CAST(NP.USER_ID AS STRING)                                     AS REP_ID,
+  NP.USER_TEAM_NAME,
+  NP.USER_TEAM_CHANNEL,
+  NP.USER_OFFICE,
+  NP.ANTIGUEDAD_REP                                              AS SENIORITY,
+  FORMAT_DATE('%Y-%m-%d', DATE_TRUNC(NP.RES_END_DATE, ISOWEEK)) AS PERIODO,
+  'SEMANA'                                                        AS TIPO,
+  COUNT(*)                                                        AS ENCUESTAS,
+  ROUND(AVG(NP.GAP_TGT) * 100, 2)                               AS GAP_TGT,
+  ROUND((SUM(NP.PROMOTER) - SUM(NP.DETRACTOR)) * 100.0
+        / NULLIF(COUNT(*), 0), 2)                                AS NPS,
+  ROUND(AVG(NP.SURVEY_TARGET_VALUE) * 100, 2)                   AS TARGET
+FROM BASE_NPS_Y20_DETAIL NP
+WHERE DATE_TRUNC(NP.RES_END_DATE, ISOWEEK) >= DATE_SUB(CURRENT_DATE(), INTERVAL 1 WEEK)
+GROUP BY 1, 2, 3, 4, 5, 6, 7
+HAVING COUNT(*) >= 3
+ORDER BY 4, 3, 2, GAP_TGT
+"""
+
 # ── EXECUÇÃO ──────────────────────────────────────────────────────────────────
+def run_query(client, label, sql):
+    print(f"[{datetime.now():%H:%M:%S}] {label}...")
+    rows = list(client.query(sql).result())
+    print(f"[{datetime.now():%H:%M:%S}]   {len(rows)} linhas.")
+    return rows
+
 def main():
     try:
         from google.cloud import bigquery
@@ -140,50 +230,110 @@ def main():
     client = bigquery.Client(project=PROJECT_ID)
 
     # Query 1 — por office
-    print(f"[{datetime.now():%H:%M:%S}] Query 1/2: agrupamento por office...")
-    rows_office = list(client.query(QUERY_OFFICE).result())
-    print(f"[{datetime.now():%H:%M:%S}]   {len(rows_office)} linhas.")
-
-    office_data = []
-    for row in rows_office:
-        office_data.append({
-            "team":    row.USER_TEAM_NAME,
-            "ch":      row.USER_TEAM_CHANNEL,
-            "office":  row.USER_OFFICE,
-            "period":  str(row.PERIODO),
-            "tipo":    row.TIPO,
-            "enc":     int(row.ENCUESTAS),
-            "gap_tgt": float(row.GAP_TGT) if row.GAP_TGT is not None else None,
-            "nps":     float(row.NPS)      if row.NPS      is not None else None,
-            "target":  float(row.TARGET)   if row.TARGET   is not None else None,
-        })
+    rows_office = run_query(client, "Query 1/5: por office", QUERY_OFFICE)
+    office_data = [
+        {
+            "team":    r.USER_TEAM_NAME,
+            "ch":      r.USER_TEAM_CHANNEL,
+            "office":  r.USER_OFFICE,
+            "period":  str(r.PERIODO),
+            "tipo":    r.TIPO,
+            "enc":     int(r.ENCUESTAS),
+            "gap_tgt": float(r.GAP_TGT) if r.GAP_TGT is not None else None,
+            "nps":     float(r.NPS)      if r.NPS      is not None else None,
+            "target":  float(r.TARGET)   if r.TARGET   is not None else None,
+        }
+        for r in rows_office
+    ]
 
     # Query 2 — por processo
-    print(f"[{datetime.now():%H:%M:%S}] Query 2/2: agrupamento por processo (PRO_PROCESS_NAME)...")
-    rows_proc = list(client.query(QUERY_PROCESS).result())
-    print(f"[{datetime.now():%H:%M:%S}]   {len(rows_proc)} linhas.")
+    rows_proc = run_query(client, "Query 2/5: por processo (CDU)", QUERY_PROCESS)
+    process_data = [
+        {
+            "team":     r.USER_TEAM_NAME,
+            "ch":       r.USER_TEAM_CHANNEL,
+            "processo": r.PRO_PROCESS_NAME,
+            "period":   str(r.PERIODO),
+            "tipo":     r.TIPO,
+            "enc":      int(r.ENCUESTAS),
+            "gap_tgt":  float(r.GAP_TGT)    if r.GAP_TGT    is not None else None,
+            "nps":      float(r.NPS)         if r.NPS        is not None else None,
+            "target":   float(r.TARGET)      if r.TARGET     is not None else None,
+            "det":      int(r.DETRATORES)    if r.DETRATORES is not None else 0,
+        }
+        for r in rows_proc
+    ]
 
-    process_data = []
-    for row in rows_proc:
-        process_data.append({
-            "team":     row.USER_TEAM_NAME,
-            "ch":       row.USER_TEAM_CHANNEL,
-            "processo": row.PRO_PROCESS_NAME,
-            "period":   str(row.PERIODO),
-            "tipo":     row.TIPO,
-            "enc":      int(row.ENCUESTAS),
-            "gap_tgt":  float(row.GAP_TGT)    if row.GAP_TGT    is not None else None,
-            "nps":      float(row.NPS)         if row.NPS        is not None else None,
-            "target":   float(row.TARGET)      if row.TARGET     is not None else None,
-            "det":      int(row.DETRATORES)    if row.DETRATORES is not None else 0,
-        })
+    # Query 3 — senioridade
+    rows_sen = run_query(client, "Query 3/5: senioridade (EXPERT vs NEWBIE)", QUERY_SENIORITY)
+    seniority_data = [
+        {
+            "team":      r.USER_TEAM_NAME,
+            "ch":        r.USER_TEAM_CHANNEL,
+            "office":    r.USER_OFFICE,
+            "seniority": r.SENIORITY,
+            "period":    str(r.PERIODO),
+            "tipo":      r.TIPO,
+            "enc":       int(r.ENCUESTAS),
+            "gap_tgt":   float(r.GAP_TGT) if r.GAP_TGT is not None else None,
+            "nps":       float(r.NPS)      if r.NPS      is not None else None,
+            "target":    float(r.TARGET)   if r.TARGET   is not None else None,
+        }
+        for r in rows_sen
+    ]
+
+    # Query 4 — TL (team_id level)
+    rows_team = run_query(client, "Query 4/5: TL level (USER_TEAM_ID)", QUERY_TEAM)
+    team_data = [
+        {
+            "team_id": r.TEAM_ID,
+            "team":    r.USER_TEAM_NAME,
+            "ch":      r.USER_TEAM_CHANNEL,
+            "office":  r.USER_OFFICE,
+            "period":  str(r.PERIODO),
+            "tipo":    r.TIPO,
+            "enc":     int(r.ENCUESTAS),
+            "gap_tgt": float(r.GAP_TGT) if r.GAP_TGT is not None else None,
+            "nps":     float(r.NPS)      if r.NPS      is not None else None,
+            "target":  float(r.TARGET)   if r.TARGET   is not None else None,
+        }
+        for r in rows_team
+    ]
+
+    # Query 5 — REP individual (com fallback se campo não existir)
+    rep_data = []
+    try:
+        rows_rep = run_query(client, "Query 5/5: REP individual (USER_ID)", QUERY_REP)
+        rep_data = [
+            {
+                "rep_id":   r.REP_ID,
+                "team":     r.USER_TEAM_NAME,
+                "ch":       r.USER_TEAM_CHANNEL,
+                "office":   r.USER_OFFICE,
+                "seniority":r.SENIORITY,
+                "period":   str(r.PERIODO),
+                "tipo":     r.TIPO,
+                "enc":      int(r.ENCUESTAS),
+                "gap_tgt":  float(r.GAP_TGT) if r.GAP_TGT is not None else None,
+                "nps":      float(r.NPS)      if r.NPS      is not None else None,
+                "target":   float(r.TARGET)   if r.TARGET   is not None else None,
+            }
+            for r in rows_rep
+        ]
+    except Exception as e:
+        print(f"[{datetime.now():%H:%M:%S}]   ⚠ Query REP falhou: {e}")
+        print(f"[{datetime.now():%H:%M:%S}]   Verifique o nome do campo de identificação do rep (USER_ID).")
+        rep_data = []
 
     # Gerar data.js
     js_content = (
         f"// Gerado automaticamente por refresh_nps_data.py\n"
         f"// Atualizado em: {datetime.now():%Y-%m-%d %H:%M:%S}\n"
-        f"window.NPS_DATA = {json.dumps(office_data, ensure_ascii=False, indent=2)};\n\n"
-        f"window.NPS_PROCESS_DATA = {json.dumps(process_data, ensure_ascii=False, indent=2)};\n"
+        f"window.NPS_DATA = {json.dumps(office_data,    ensure_ascii=False, indent=2)};\n\n"
+        f"window.NPS_PROCESS_DATA = {json.dumps(process_data,  ensure_ascii=False, indent=2)};\n\n"
+        f"window.NPS_SENIORITY_DATA = {json.dumps(seniority_data, ensure_ascii=False, indent=2)};\n\n"
+        f"window.NPS_TEAM_DATA = {json.dumps(team_data,      ensure_ascii=False, indent=2)};\n\n"
+        f"window.NPS_REP_DATA = {json.dumps(rep_data,       ensure_ascii=False, indent=2)};\n"
     )
 
     with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
