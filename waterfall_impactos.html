@@ -1263,35 +1263,56 @@ function buildComentarios() {
   renderComments(comments, el, filtersHtml);
 }
 
-function buildActionPlan(procSegs=[]) {
+function buildActionPlan(topProblems=[], totalDet=0) {
+  // top3: as 3 CDUs/problemas mais críticos com % de impacto
+  const top3=topProblems.slice(0,3);
+  const top1=top3[0];
+  const top2=top3[1];
+  const top3a=top3[2];
+
+  const pct=(cs)=>totalDet>0?Math.round((cs.length/totalDet)*100):0;
+  const lbl=(t)=>t?t[0].length>40?t[0].slice(0,38)+'…':t[0]:'—';
+
+  const shortItems=top1
+    ?`▸ <strong>${lbl(top1)}</strong>: ${top1[1].length} det (${pct(top1[1])}% do total) — revisar script e calibrar reps imediatamente<br>
+       ▸ Abrir análise de causa raiz com TL responsável pelo CDU<br>
+       ▸ Monitorar diariamente até estabilização`
+    :`▸ Abrir análise de detratores recentes com TL<br>▸ Calibração imediata nos processos críticos`;
+
+  const midItems=top2
+    ?`▸ <strong>${lbl(top2)}</strong>: ${top2[1].length} det (${pct(top2[1])}%) — revisão de fluxo e script<br>
+       ${top3a?`▸ <strong>${lbl(top3a)}</strong>: ${top3a[1].length} det (${pct(top3a[1])}%) — trilha de capacitação focada<br>`:''}
+       ▸ Definir KPI semanal de acompanhamento por CDU`
+    :`▸ Revisão de fluxo/script por CDU prioritária<br>▸ Trilha de capacitação focada nos gaps`;
+
+  const longItems=top1
+    ?`▸ Reestruturação do processo <strong>${lbl(top1)}</strong> (maior impacto)<br>
+       ▸ Revisão de meta por maturidade do time por CDU<br>
+       ▸ Ciclo trimestral de melhoria contínua com análise de comentários`
+    :`▸ Reestruturação do processo de maior GAP<br>▸ Revisão de meta por maturidade do time`;
+
+  const totalImpact=top3.reduce((s,t)=>s+(t?t[1].length:0),0);
+  const totalImpactPct=totalDet>0?Math.round((totalImpact/totalDet)*100):0;
+
   return `<div style="background:#fff;border:1.5px solid #E0E0E0;border-radius:10px;padding:14px 18px;margin-bottom:16px">
-    <div style="font-size:11px;font-weight:800;color:#333;text-transform:uppercase;letter-spacing:.4px;margin-bottom:12px">
-      📋 Plano de Ações Sugerido
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:6px">
+      <span style="font-size:11px;font-weight:800;color:#333;text-transform:uppercase;letter-spacing:.4px">📋 Plano de Ações Sugerido</span>
+      ${totalDet>0?`<span style="font-size:10px;background:#FFF0F0;color:#C0392B;font-weight:700;padding:3px 8px;border-radius:12px">
+        Top 3 problemas = ${totalImpact} det (${totalImpactPct}% do total)
+      </span>`:''}
     </div>
     <div class="action-plan">
       <div class="ap-box ap-short">
         <div class="ap-title">⚡ Curto prazo (1–2 sem)</div>
-        <div class="ap-items">
-          ▸ Calibração imediata nos processos críticos<br>
-          ▸ Abrir análise de detratores recentes<br>
-          ▸ Comunicar TLs sobre top oportunidades de GAP
-        </div>
+        <div class="ap-items" style="font-size:11px;line-height:1.7">${shortItems}</div>
       </div>
       <div class="ap-box ap-mid">
         <div class="ap-title">🔧 Médio prazo (1–2 meses)</div>
-        <div class="ap-items">
-          ▸ Revisão de fluxo/script por CDU prioritária<br>
-          ▸ Trilha de capacitação focada nos gaps<br>
-          ▸ Definir KPI de acompanhamento semanal
-        </div>
+        <div class="ap-items" style="font-size:11px;line-height:1.7">${midItems}</div>
       </div>
       <div class="ap-box ap-long">
         <div class="ap-title">🎯 Longo prazo (trimestral)</div>
-        <div class="ap-items">
-          ▸ Reestruturação do processo de maior GAP<br>
-          ▸ Revisão de meta por maturidade do time<br>
-          ▸ Ciclo de melhoria contínua por CDU
-        </div>
+        <div class="ap-items" style="font-size:11px;line-height:1.7">${longItems}</div>
       </div>
     </div>
   </div>`;
@@ -1302,19 +1323,14 @@ function renderComments(comments,container,resumoHtml='') {
   const pro=comments.filter(c=>c.tipo==='PROMOTOR');
   const neu=comments.filter(c=>c.tipo==='NEUTRO');
 
-  // Keyword freq
-  const kw={};
+  // Agrupa por CDU (problema classificado) — fallback para processo se sem CDU
+  const byCDU={};
   det.forEach(c=>{
-    (c.comentario||'').toLowerCase()
-      .replace(/[^a-záéíóúãõâêîôûàèç\s]/g,'').split(/\s+/)
-      .filter(w=>w.length>4&&!['muito','mais','para','como','isso','este','esta','esse','pela','pelo','pois','quando','porque','tinha','estava','ficou'].includes(w))
-      .forEach(w=>kw[w]=(kw[w]||0)+1);
+    const k=(c.cdu&&c.cdu.trim())||(c.processo&&c.processo.trim())||'(sem classificação)';
+    if(!byCDU[k]) byCDU[k]=[];
+    byCDU[k].push(c);
   });
-  const topKw=Object.entries(kw).sort((a,b)=>b[1]-a[1]).slice(0,15);
-
-  const byProc={};
-  det.forEach(c=>{const k=c.processo||'(sem CDU)';if(!byProc[k])byProc[k]=[];byProc[k].push(c);});
-  const topProc=Object.entries(byProc).sort((a,b)=>b[1].length-a[1].length).slice(0,5);
+  const topCDU=Object.entries(byCDU).sort((a,b)=>b[1].length-a[1].length).slice(0,8);
 
   container.innerHTML=resumoHtml+`
   <div class="summary-row" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px">
@@ -1322,40 +1338,34 @@ function renderComments(comments,container,resumoHtml='') {
     <div class="scard vol"><div class="scard-lbl">Neutros c/ comentário</div><div class="scard-val">${neu.length}</div></div>
     <div class="scard gap-pos"><div class="scard-lbl">Promotores c/ comentário</div><div class="scard-val">${pro.length}</div></div>
   </div>
-  ${topKw.length?`
-  <div class="panel-title">☁️ Palavras mais citadas — Detratores</div>
-  <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px">
-    ${topKw.map(([w,n])=>`<span style="background:#FEECEF;color:#F23D4F;font-size:${Math.min(14,9+Math.round(n/3))}px;font-weight:700;padding:3px 10px;border-radius:20px" title="${n}x">${w} <small>(${n})</small></span>`).join('')}
-  </div>`:''}
-  <div class="panel-title">🎯 Detratores por CDU (top 5)</div>
-  <div class="impact-list" style="margin-bottom:16px">
-    ${topProc.map(([p,cs],i)=>{
-      const bp=Math.round((cs.length/det.length)*100);
-      return `<div class="impact-row">
-        <div class="impact-rank ${rankCls(i,true)}">${i+1}</div>
-        <div class="impact-name" style="min-width:220px">${p.length>45?p.slice(0,43)+'…':p}</div>
-        <div class="impact-bar-wrap"><div class="impact-bar bar-neg" style="width:${bp}%"></div></div>
-        <div class="impact-gap val-neg">${cs.length} det</div>
-        <div class="impact-meta"><span class="enc-pill">${bp}%</span></div>
+
+  <div class="panel-title">🔴 Classificação de Problemas — Top CDUs com mais detratores</div>
+  <div style="margin-bottom:20px">
+    ${topCDU.map(([prob,cs],i)=>{
+      const pct=det.length?Math.round((cs.length/det.length)*100):0;
+      const ex=cs.find(c=>c.comentario&&c.comentario.length>20);
+      const isHot=i<3;
+      return `<div style="margin-bottom:12px;padding:12px 14px;background:${isHot?'#FFF5F5':'#FAFAFA'};border-radius:8px;border-left:3px solid ${isHot?'#F23D4F':'#E0E0E0'}">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <span style="font-size:11px;font-weight:800;color:#bbb;min-width:18px">${i+1}</span>
+          <span style="font-size:12px;font-weight:700;color:${isHot?'#C0392B':'#333'};flex:1">${isHot?'🔥 ':''}${prob}</span>
+          <span style="font-size:11px;font-weight:800;color:#F23D4F;white-space:nowrap">${cs.length} det · ${pct}%</span>
+        </div>
+        <div style="background:#F0F0F0;border-radius:3px;height:5px;margin-bottom:${ex?'8px':'0'}">
+          <div style="height:100%;width:${pct}%;background:${isHot?'#F23D4F':'#FDA5A5'};border-radius:3px"></div>
+        </div>
+        ${ex?`<div style="font-size:11px;color:#666;font-style:italic;border-left:2px solid #F5B0B0;padding-left:8px;margin-top:2px">"${ex.comentario.length>160?ex.comentario.slice(0,158)+'…':ex.comentario}"
+          <div style="margin-top:3px">
+            ${ex.cdu?`<span class="ctag" style="background:#FFF0F0;color:#DC2626">${ex.cdu}</span>`:''}
+            ${ex.solucao?`<span class="ctag" style="background:#FFF8E1;color:#B45309">${ex.solucao}</span>`:''}
+            <span class="ctag">${ex.data||''}</span>
+          </div>
+        </div>`:''}
       </div>`;
     }).join('')}
   </div>
-  <div class="panel-title">💬 Últimos comentários de detratores</div>
-  ${det.slice(0,15).map(c=>`
-    <div class="comment-card">
-      <div class="comment-meta">
-        <span>${c.data||'—'}</span><span>${c.office||''}</span>
-        ${chTag(c.ch||'')} <span>${c.seniority||''}</span>
-      </div>
-      <div class="comment-text">"${c.comentario}"</div>
-      <div class="comment-tags">
-        <span class="ctag">${TEAM_LABEL[c.team]||c.team||''}</span>
-        ${c.processo?`<span class="ctag">${c.processo.length>30?c.processo.slice(0,28)+'…':c.processo}</span>`:''}
-        ${c.cdu?`<span class="ctag" style="background:#FFF0F0;color:#DC2626">${c.cdu}</span>`:''}
-        ${c.solucao?`<span class="ctag" style="background:#FFF8E1;color:#B45309">${c.solucao}</span>`:''}
-      </div>
-    </div>`).join('')}
-  ${buildActionPlan()}`;
+
+  ${buildActionPlan(topCDU,det.length)}`;
 }
 
 // ── SECTION: REP OFENSOR ─────────────────────────────────────────────────
