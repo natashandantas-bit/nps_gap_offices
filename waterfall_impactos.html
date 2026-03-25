@@ -836,14 +836,14 @@ function buildImpactSection(containerId, segs, opts={}) {
     const rCls=rankCls(isNeg?negIdx++:99,isNeg);
     const label=opts.labelFn?opts.labelFn(s):s.key;
     const rowStyle=isNeg
-      ?'background:linear-gradient(90deg,#FFF5F5 0%,#fff 60%);border-left:3px solid #F23D4F'
-      :'border-left:3px solid transparent';
+      ?'background:#FFF0F0;border-left:4px solid #F23D4F'
+      :'border-left:4px solid transparent';
     return `<tr style="${rowStyle}">
       <td style="width:28px;text-align:center">
         <span class="impact-rank ${rCls}" style="display:inline-flex">${i+1}</span>
       </td>
       <td style="min-width:140px;max-width:260px">
-        <div style="font-size:11px;font-weight:${isNeg?'700':'600'};color:${isNeg?'#222':'#555'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${label}</div>
+        <div style="font-size:11px;font-weight:${isNeg?'700':'600'};color:${isNeg?'#222':'#555'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${isNeg?'🔴 ':''}${label}</div>
         <div style="margin-top:4px;background:#F0F0F0;border-radius:3px;height:5px;overflow:hidden;max-width:200px">
           <div style="height:100%;border-radius:3px;width:${bp}%" class="impact-bar ${barCls(s.gap)}"></div>
         </div>
