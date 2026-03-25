@@ -1437,9 +1437,11 @@ function renderTLOutlier(){
   });
   let agg=Object.values(tlMap).map(m=>({...m,nps:m._nps/m.enc,target:m._tgt/m.enc,gap_tgt:m._nps/m.enc-m._tgt/m.enc}));
   agg.sort((a,b)=>a.gap_tgt-b.gap_tgt);
-  const top10=agg.slice(0,10);
+  const showAllTL=window._tlShowAll||false;
+  const visibleTL=showAllTL?agg:agg.slice(0,10);
+  const hiddenTL=agg.length-visibleTL.length;
 
-  const trs=top10.map((r,i)=>`<tr style="background:#FFF8F8">
+  const trs=visibleTL.map((r,i)=>`<tr style="background:#FFF8F8">
     <td class="tc"><span class="outlier-rank rank-bad">${i+1}</span></td>
     <td><strong style="font-size:12px">${r.tl_name||r.tl_ldap||'—'}</strong><br><span style="font-size:9px;color:#aaa">${r.tl_ldap||''}</span></td>
     <td style="font-size:11px;color:#777">${r.team.replace('BR_Buyers_','')}</td>
@@ -1451,6 +1453,18 @@ function renderTLOutlier(){
     <td class="tr" style="color:#888">${r.enc.toLocaleString('pt-BR')}</td>
   </tr>`).join('');
 
+  const verMaisTL=hiddenTL>0
+    ?`<tr><td colspan="9" style="text-align:center;padding:10px">
+        <button class="btn-sec" style="font-size:11px;padding:6px 18px"
+          onclick="window._tlShowAll=true;renderCross()">Ver mais ${hiddenTL} TLs</button>
+       </td></tr>`
+    :showAllTL
+      ?`<tr><td colspan="9" style="text-align:center;padding:10px">
+          <button class="btn-sec" style="font-size:11px;padding:6px 18px"
+            onclick="window._tlShowAll=false;renderCross()">Ocultar</button>
+         </td></tr>`
+      :'';
+
   return `
   <div class="panel">
     <div class="sec-title">Outliers por TL — 10 mais ofensores <span style="font-weight:400;font-size:10px;color:#aaa">semana ${DATES.wa} · mín. 5 enc.</span></div>
@@ -1460,7 +1474,7 @@ function renderTLOutlier(){
         <th class="tc">#</th><th>TL</th><th>Time</th><th class="tc">Canal</th><th>Office</th>
         <th class="tr">NPS</th><th class="tr">Target</th><th class="tr">GAP</th><th class="tr">Enc.</th>
       </tr></thead>
-      <tbody>${trs}</tbody>
+      <tbody>${trs}${verMaisTL}</tbody>
     </table></div>
   </div>`;
 }
@@ -1503,9 +1517,11 @@ function renderRepOutlier(){
     return {...r,ch,avg_nps:avg,dev:avg!=null?r.nps-avg:null};
   }).sort((a,b)=>a.gap_tgt-b.gap_tgt);
 
-  const top10=rows.slice(0,10);
+  const showAllRep=window._repShowAll||false;
+  const visibleRep=showAllRep?rows:rows.slice(0,10);
+  const hiddenRep=rows.length-visibleRep.length;
 
-  const trs=top10.map((r,i)=>`<tr style="background:#FFF8F8">
+  const trs=visibleRep.map((r,i)=>`<tr style="background:#FFF8F8">
     <td class="tc"><span class="outlier-rank rank-bad">${i+1}</span></td>
     <td><strong style="font-size:12px">${r.rep_name||r.rep_ldap||'—'}</strong><br><span style="font-size:9px;color:#aaa">${r.rep_ldap||''}</span></td>
     <td style="font-size:11px;color:#777">${r.team.replace('BR_Buyers_','')}</td>
@@ -1519,6 +1535,18 @@ function renderRepOutlier(){
     <td class="tr" style="color:#888">${r.enc.toLocaleString('pt-BR')}</td>
   </tr>`).join('');
 
+  const verMaisRep=hiddenRep>0
+    ?`<tr><td colspan="11" style="text-align:center;padding:10px">
+        <button class="btn-sec" style="font-size:11px;padding:6px 18px"
+          onclick="window._repShowAll=true;renderCross()">Ver mais ${hiddenRep} reps</button>
+       </td></tr>`
+    :showAllRep
+      ?`<tr><td colspan="11" style="text-align:center;padding:10px">
+          <button class="btn-sec" style="font-size:11px;padding:6px 18px"
+            onclick="window._repShowAll=false;renderCross()">Ocultar</button>
+         </td></tr>`
+      :'';
+
   return `
   <div class="panel">
     <div class="sec-title">Outliers por Rep — 10 mais ofensores <span style="font-weight:400;font-size:10px;color:#aaa">semana ${DATES.wa} · mín. 3 enc./rep</span></div>
@@ -1529,7 +1557,7 @@ function renderRepOutlier(){
         <th class="tr">NPS Rep</th><th class="tr">Média Office</th><th class="tr">Δ NPS</th>
         <th class="tr">GAP_TGT</th><th class="tr">Enc.</th>
       </tr></thead>
-      <tbody>${trs}</tbody>
+      <tbody>${trs}${verMaisRep}</tbody>
     </table></div>
   </div>`;
 }
