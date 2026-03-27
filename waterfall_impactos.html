@@ -276,7 +276,7 @@ tr:hover td{background:#FAFAFA}
       <div class="wf-header">
         <div>
           <div class="wf-title">📉 Drill-down de Impactos — Onde está o GAP?</div>
-          <div class="wf-sub">Clique em qualquer barra para filtrar o próximo nível. Target → deltas por segmento → NPS Atual</div>
+          <div class="wf-sub">Clique em qualquer barra para filtrar o próximo nível. NPS Sem. Anterior → deltas WoW → NPS Sem. Atual</div>
         </div>
         <div style="display:flex;align-items:center;gap:8px">
           <span style="font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.4px">Equipe</span>
@@ -536,10 +536,24 @@ function _drillOv(extraOffice, extraCanal) {
   };
 }
 
-function buildDrillWaterfall(level, dimKey, rows, selectedKey) {
+function buildDrillWaterfall(level, dimKey, rows, prevRows, selectedKey) {
   const wrap=document.getElementById('drill-canvas-'+level);
+
+  // Monta lookup da semana anterior
+  const prevMap={};
+  if(prevRows&&prevRows.length){
+    aggregateBy(prevRows,dimKey).forEach(s=>{prevMap[s.key]=s;});
+  }
+
   let segs=aggregateBy(rows,dimKey).filter(s=>s.enc>=5);
-  segs.sort((a,b)=>a.contribution-b.contribution);
+  // Enriquece com delta WoW por segmento
+  segs=segs.map(s=>{
+    const prev=prevMap[s.key];
+    const npsPrev=prev?prev.nps:null;
+    const wow=npsPrev!=null?parseFloat((s.nps-npsPrev).toFixed(2)):0;
+    return{...s,npsPrev,wow,wowC:parseFloat((wow*s.weight).toFixed(2))};
+  });
+  segs.sort((a,b)=>a.wowC-b.wowC);
 
   if(!segs.length){
     wrap.innerHTML='<div class="empty-msg" style="padding:20px 0;text-align:center;font-size:11px;color:#aaa">Sem dados</div>';
@@ -559,6 +573,9 @@ function buildDrillWaterfall(level, dimKey, rows, selectedKey) {
       nps:othEnc?mid.reduce((s,x)=>s+x.nps*x.enc,0)/othEnc:0,
       target:othEnc?mid.reduce((s,x)=>s+x.target*x.enc,0)/othEnc:0,
       gap:othEnc?mid.reduce((s,x)=>s+x.gap*x.enc,0)/othEnc:0,
+      wowC:mid.reduce((s,x)=>s+x.wowC,0),
+      wow:othEnc?mid.reduce((s,x)=>s+(x.wow||0)*x.enc,0)/othEnc:0,
+      npsPrev:null,
       contribution:mid.reduce((s,x)=>s+x.contribution,0),
       det:mid.reduce((s,x)=>s+(x.det||0),0),
       opp:mid.reduce((s,x)=>s+x.opp,0),
@@ -568,29 +585,31 @@ function buildDrillWaterfall(level, dimKey, rows, selectedKey) {
     segs=[...worst,outros,...best];
   }
 
-  // Overall summary para Target e NPS Atual
+  // Overall summaries: semana atual e anterior
   const summary=weightedSummary(rows)||{nps:0,target:0};
-  const target  =parseFloat(summary.target.toFixed(2));
+  const prevSummary=prevRows&&prevRows.length?weightedSummary(prevRows):null;
   const npsAtual=parseFloat(summary.nps.toFixed(2));
-  const floor=Math.max(0, Math.floor((Math.min(target,npsAtual)-8)/5)*5);
-  const ceil =Math.ceil( (Math.max(target,npsAtual)+4)/5)*5;
+  const npsPrevious=prevSummary?parseFloat(prevSummary.nps.toFixed(2)):npsAtual;
 
-  const labels=['Target'];
-  const barsData=[[floor,target]];
+  const floor=Math.max(0,Math.floor((Math.min(npsPrevious,npsAtual)-8)/5)*5);
+  const ceil =Math.ceil( (Math.max(npsPrevious,npsAtual)+4)/5)*5;
+
+  const labels=['Sem. Anterior'];
+  const barsData=[[floor,npsPrevious]];
   const colors=['rgba(150,150,150,0.85)'];
-  const dlLabels=[target.toFixed(1)+'%'];
+  const dlLabels=[npsPrevious.toFixed(1)+'%'];
   const dlColors=['#555'];
 
-  let running=target;
+  let running=npsPrevious;
   segs.forEach(s=>{
     const isSelected=selectedKey&&s.key===selectedKey;
-    const isNeg=s.contribution<0;
+    const isNeg=s.wowC<0;
     const isOther=!!s.isOther;
     const alpha=selectedKey&&!isSelected?0.25:0.85;
     const lbl=dimKey==='ch'?(CH_LABEL[s.key]||s.key):(s.key.length>16?s.key.slice(0,14)+'…':s.key);
     labels.push(lbl);
     const start=running;
-    running=parseFloat((running+s.contribution).toFixed(2));
+    running=parseFloat((running+s.wowC).toFixed(2));
     const lo=Math.min(start,running), hi=Math.max(start,running);
     barsData.push([parseFloat(lo.toFixed(2)),parseFloat(hi.toFixed(2))]);
     colors.push(
@@ -598,11 +617,11 @@ function buildDrillWaterfall(level, dimKey, rows, selectedKey) {
       isOther?`rgba(180,180,180,${alpha})`:
       isNeg?`rgba(242,61,79,${alpha})`:`rgba(0,166,80,${alpha})`
     );
-    dlLabels.push((s.contribution>=0?'+':'')+s.contribution.toFixed(1)+' pp');
+    dlLabels.push((s.wowC>=0?'+':'')+s.wowC.toFixed(1)+' pp');
     dlColors.push(isOther?'#888':isNeg?'#c0392b':'#1a7a3b');
   });
 
-  labels.push('NPS Atual');
+  labels.push('Sem. Atual');
   barsData.push([floor,npsAtual]);
   colors.push('rgba(26,115,232,0.85)');
   dlLabels.push(npsAtual.toFixed(1)+'%');
@@ -612,7 +631,7 @@ function buildDrillWaterfall(level, dimKey, rows, selectedKey) {
   if(drillCharts[level-1]){try{drillCharts[level-1].destroy();}catch(e){}}
 
   const ctx=document.getElementById('drill-chart-'+level).getContext('2d');
-  const _segs=segs; // closure
+  const _segs=segs;
   drillCharts[level-1]=new Chart(ctx,{
     type:'bar',
     data:{labels,datasets:[{data:barsData,backgroundColor:colors,borderWidth:0,borderRadius:3,borderSkipped:false}]},
@@ -637,11 +656,11 @@ function buildDrillWaterfall(level, dimKey, rows, selectedKey) {
         },
         tooltip:{callbacks:{label:c=>{
           const i=c.dataIndex;
-          if(i===0) return ` Meta: ${target.toFixed(1)}%`;
-          if(i===labels.length-1) return ` NPS Atual: ${npsAtual.toFixed(1)}%`;
+          if(i===0) return ` NPS Sem. Anterior: ${npsPrevious.toFixed(1)}%`;
+          if(i===labels.length-1) return ` NPS Sem. Atual: ${npsAtual.toFixed(1)}%`;
           const s=_segs[i-1];
-          return [` Contribuição: ${(s.contribution>=0?'+':'')+s.contribution.toFixed(2)} pp`,
-                  ` NPS: ${s.nps.toFixed(1)}% | Meta: ${s.target.toFixed(1)}%`,
+          return [` WoW: ${(s.wowC>=0?'+':'')+s.wowC.toFixed(2)} pp`,
+                  ` NPS atual: ${s.nps.toFixed(1)}% | Anterior: ${s.npsPrev!=null?s.npsPrev.toFixed(1)+'%':'—'}`,
                   ` Volume: ${fmtEnc(s.enc)} enc`];
         }}}
       },
@@ -672,36 +691,48 @@ function buildDrillAll() {
     if(btn) btn.style.display=v?'':'none';
   });
 
+  // Período anterior (semana anterior automática)
+  const allPeriods=latestPeriods(window.NPS_DATA||[],F.tipo);
+  const prevPeriod=allPeriods[1]||null;
+
   // Chart 1: Office — base (no DRILL filter)
   const r1=filterRows(window.NPS_DATA||[],{team});
-  buildDrillWaterfall(1,'office',r1,DRILL.office);
+  const r1Prev=filterRows(window.NPS_DATA||[],{team,period:prevPeriod});
+  buildDrillWaterfall(1,'office',r1,r1Prev,DRILL.office);
 
   // Chart 2: Canal — filtrado por office selecionado
   const r2=filterRows(window.NPS_DATA||[],{team,office:DRILL.office||'ALL'});
-  buildDrillWaterfall(2,'ch',r2,DRILL.canal);
+  const r2Prev=filterRows(window.NPS_DATA||[],{team,office:DRILL.office||'ALL',period:prevPeriod});
+  buildDrillWaterfall(2,'ch',r2,r2Prev,DRILL.canal);
 
   // Chart 3: Processo — filtrado por office + canal
   const r3=filterRows(window.NPS_PROCESS_DATA||[],{team,office:DRILL.office||'ALL',canal:DRILL.canal||'ALL'});
-  buildDrillWaterfall(3,'processo',r3,DRILL.processo);
+  const r3Prev=filterRows(window.NPS_PROCESS_DATA||[],{team,office:DRILL.office||'ALL',canal:DRILL.canal||'ALL',period:prevPeriod});
+  buildDrillWaterfall(3,'processo',r3,r3Prev,DRILL.processo);
 
   // Chart 4: CDU
   const lbl4=document.getElementById('drill-canvas-4')?.closest('.drill-card')?.querySelector('.drill-card-dim');
-  let r4;
+  let r4,r4Prev;
   if(DRILL.processo) {
     r4=filterRows(window.NPS_PROCESS_DATA||[],{team,office:DRILL.office||'ALL',canal:DRILL.canal||'ALL'})
        .filter(r=>r.processo===DRILL.processo&&r.cdu);
+    r4Prev=filterRows(window.NPS_PROCESS_DATA||[],{team,office:DRILL.office||'ALL',canal:DRILL.canal||'ALL',period:prevPeriod})
+           .filter(r=>r.processo===DRILL.processo&&r.cdu);
     if(lbl4) lbl4.textContent='CDU do processo selecionado';
   } else {
     const cduDirect=filterRows(window.NPS_CDU_DATA||[],{team,office:DRILL.office||'ALL',canal:DRILL.canal||'ALL'});
     if(cduDirect.length) {
       r4=cduDirect;
+      r4Prev=filterRows(window.NPS_CDU_DATA||[],{team,office:DRILL.office||'ALL',canal:DRILL.canal||'ALL',period:prevPeriod});
     } else {
       r4=filterRows(window.NPS_PROCESS_DATA||[],{team,office:DRILL.office||'ALL',canal:DRILL.canal||'ALL'})
          .filter(r=>r.cdu);
+      r4Prev=filterRows(window.NPS_PROCESS_DATA||[],{team,office:DRILL.office||'ALL',canal:DRILL.canal||'ALL',period:prevPeriod})
+             .filter(r=>r.cdu);
     }
     if(lbl4) lbl4.textContent='Por CDU';
   }
-  buildDrillWaterfall(4,'cdu',r4,DRILL.cdu);
+  buildDrillWaterfall(4,'cdu',r4,r4Prev,DRILL.cdu);
 
   buildSimulation();
 }
@@ -856,23 +887,34 @@ function buildWaterfallAll() { buildDrillAll(); } // compat
 function buildSummary() {
   const rows=filterRows(window.NPS_DATA||[]);
   const s=weightedSummary(rows);
+
+  // WoW: semana anterior automática
+  const allPeriods=latestPeriods(window.NPS_DATA||[],F.tipo);
+  const prevPeriod=allPeriods[1]||null;
+  const prevRows=prevPeriod?filterRows(window.NPS_DATA||[],{period:prevPeriod}):[];
+  const sPrev=prevRows.length?weightedSummary(prevRows):null;
+  const wow=s&&sPrev?parseFloat((s.nps-sPrev.nps).toFixed(1)):null;
+  const prevLabel=prevPeriod?fmtPeriod(prevPeriod):'—';
+
   document.getElementById('topbar-period').textContent=
-    (F.tipo==='SEMANA'?'Semana de ':'Mês de ')+(F.period?fmtPeriod(F.period):'—');
+    (F.period?fmtPeriod(F.period):'—')+(prevPeriod?' vs '+prevLabel:'');
   if(!s){document.getElementById('summary-row').innerHTML='<div class="empty-msg" style="grid-column:1/-1">Sem dados.</div>';return;}
   const gc=s.gap>=0?'gap-pos':s.gap>=-3?'gap-warn':'gap-neg';
+  const wowCls=wow==null?'vol':wow>=0?'gap-pos':wow>=-3?'gap-warn':'gap-neg';
+  const wowTxt=wow!=null?(wow>=0?'+':'')+wow.toFixed(1)+' pp':'—';
   document.getElementById('summary-row').innerHTML=`
     <div class="scard nps"><div class="scard-lbl">NPS Realizado</div>
       <div class="scard-val">${fmtNPS(s.nps)}</div>
-      <div class="scard-sub">${F.tipo==='SEMANA'?'Semana':'Mês'} ${fmtPeriod(F.period)}</div></div>
+      <div class="scard-sub">Semana ${fmtPeriod(F.period)}</div></div>
     <div class="scard tgt"><div class="scard-lbl">Meta (Target)</div>
       <div class="scard-val">${fmtNPS(s.target)}</div>
       <div class="scard-sub">ponderado por volume</div></div>
     <div class="scard ${gc}"><div class="scard-lbl">GAP vs Meta</div>
       <div class="scard-val">${fmtGap(s.gap)} pp</div>
       <div class="scard-sub">${s.gap>=0?'✅ Acima da meta':'⚠️ Abaixo da meta'}</div></div>
-    <div class="scard vol"><div class="scard-lbl">Volume</div>
-      <div class="scard-val">${fmtEnc(s.enc)}</div>
-      <div class="scard-sub">${s.det>0?fmtEnc(s.det)+' detratores':''}</div></div>`;
+    <div class="scard ${wowCls}"><div class="scard-lbl">WoW vs Sem. Ant.</div>
+      <div class="scard-val">${wowTxt}</div>
+      <div class="scard-sub">vs ${prevLabel}</div></div>`;
 }
 
 // ── GENERIC SECTION (lista unificada com todos os dados) ─────────────────
