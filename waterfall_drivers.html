@@ -146,6 +146,32 @@ tr:hover td{background:#FAFAFA}
 
   <div class="summary-row" id="summary-row"></div>
 
+  <!-- PAINEL TENDÊNCIA WoW / MoM -->
+  <div class="wf-panel" style="margin-bottom:16px">
+    <div style="padding:16px 22px 0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <div>
+        <div class="wf-title">📈 Tendência de NPS — WoW &amp; MoM</div>
+        <div class="wf-sub">Evolução semanal e mensal do NPS realizado vs meta</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:#F0F0F0;margin-top:14px">
+      <div style="background:#fff;padding:14px 18px 18px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <span style="font-size:11px;font-weight:800;color:#444">Semana a Semana (WoW)</span>
+          <span id="wow-delta-badge" style="font-size:12px;font-weight:800;padding:2px 10px;border-radius:12px;background:#F5F5F5;color:#888">—</span>
+        </div>
+        <div style="position:relative;height:160px"><canvas id="chart-wow"></canvas></div>
+      </div>
+      <div style="background:#fff;padding:14px 18px 18px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <span style="font-size:11px;font-weight:800;color:#444">Mês a Mês (MoM)</span>
+          <span id="mom-delta-badge" style="font-size:12px;font-weight:800;padding:2px 10px;border-radius:12px;background:#F5F5F5;color:#888">—</span>
+        </div>
+        <div style="position:relative;height:160px"><canvas id="chart-mom"></canvas></div>
+      </div>
+    </div>
+  </div>
+
   <!-- WATERFALL DRILL-DOWN -->
   <div class="wf-panel">
     <div class="wf-top">
@@ -442,8 +468,89 @@ function applyFilters() {
   buildReport();
 }
 
+let _trendCharts = { wow: null, mom: null };
+
+function buildTrendPanel() {
+  const all = window.NPS_DRIVER_DATA || [];
+  const driverSet = cfg().drivers;
+
+  // Agrega NPS e Target por período para os drivers da view ativa
+  function aggByPeriod(tipo) {
+    const map = {};
+    all.filter(r => r.tipo === tipo && driverSet.has(r.driver)).forEach(r => {
+      if (!map[r.period]) map[r.period] = { npsW:0, tgtW:0, enc:0 };
+      map[r.period].npsW += (r.nps    || 0) * (r.enc || 0);
+      map[r.period].tgtW += (r.target || 0) * (r.enc || 0);
+      map[r.period].enc  += (r.enc || 0);
+    });
+    return Object.entries(map)
+      .filter(([,v]) => v.enc > 0)
+      .map(([p, v]) => ({ period: p, nps: v.npsW / v.enc, target: v.tgtW / v.enc }))
+      .sort((a, b) => a.period.localeCompare(b.period));
+  }
+
+  function renderTrend(canvasId, badgeId, points, labelFn) {
+    const ctx = document.getElementById(canvasId);
+    if (!ctx || !points.length) return;
+    if (_trendCharts[canvasId]) { try { _trendCharts[canvasId].destroy(); } catch(e){} }
+
+    const labels  = points.map(p => labelFn(p.period));
+    const npsVals = points.map(p => +p.nps.toFixed(2));
+    const tgtVals = points.map(p => +p.target.toFixed(2));
+
+    // Badge WoW / MoM delta
+    const badge = document.getElementById(badgeId);
+    if (points.length >= 2) {
+      const delta = points[points.length-1].nps - points[points.length-2].nps;
+      const isPos = delta >= 0;
+      badge.textContent = (isPos ? '+' : '') + delta.toFixed(1) + ' pp';
+      badge.style.background = isPos ? '#E6F9F1' : '#FEE8EB';
+      badge.style.color       = isPos ? '#00875A' : '#F23D4F';
+    }
+
+    const allVals = [...npsVals, ...tgtVals];
+    const minV = Math.max(0, Math.floor((Math.min(...allVals) - 5) / 5) * 5);
+    const maxV = Math.ceil((Math.max(...allVals) + 3) / 5) * 5;
+
+    _trendCharts[canvasId] = new Chart(ctx, {
+      type: 'line',
+      data: { labels, datasets: [
+        { label: 'NPS', data: npsVals, borderColor: '#3483FA', backgroundColor: 'rgba(52,131,250,0.08)',
+          borderWidth: 2.5, pointRadius: 4, pointBackgroundColor: '#3483FA', tension: 0.3, fill: true },
+        { label: 'Meta', data: tgtVals, borderColor: '#9CA3AF', backgroundColor: 'transparent',
+          borderWidth: 1.5, borderDash: [4,3], pointRadius: 2, tension: 0.3 },
+      ]},
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        layout: { padding: { top: 18 } },
+        plugins: {
+          legend: { display: false },
+          datalabels: { display: true,
+            formatter: (v, ctx) => ctx.datasetIndex === 0 ? v.toFixed(1) : null,
+            color: '#3483FA', font: { weight: 700, size: 9 }, anchor: 'end', align: 'end', offset: 2 },
+          tooltip: { callbacks: { label: c => ` ${c.dataset.label}: ${c.parsed.y.toFixed(1)}%` } },
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: { font: { size: 9 }, color: '#888', maxRotation: 35, autoSkip: false } },
+          y: { min: minV, max: maxV, grid: { color: 'rgba(0,0,0,0.05)' },
+               ticks: { font: { size: 9 }, color: '#aaa', callback: v => v + '%' } },
+        },
+      },
+    });
+  }
+
+  const wowPts = aggByPeriod('SEMANA').slice(-8);
+  const momPts = aggByPeriod('MES');
+
+  renderTrend('chart-wow', 'wow-delta-badge', wowPts,
+    p => { const d = new Date(p + 'T00:00:00'); return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`; });
+  renderTrend('chart-mom', 'mom-delta-badge', momPts,
+    p => { const d = new Date(p + 'T00:00:00'); return d.toLocaleDateString('pt-BR',{month:'short',year:'2-digit'}); });
+}
+
 function buildReport() {
   buildSummary();
+  buildTrendPanel();
   buildDrillAll();
   switchTab(activeTab, true);
 }
