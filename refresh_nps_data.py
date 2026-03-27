@@ -324,16 +324,18 @@ GROUP BY 1, 2, 3, 4, 5, 6
 ORDER BY 1, 2, 3, 4
 """
 
-# ── QUERY DRIVER: DM_CX_NPS_CS_GOALS_MGR_AND_UP filtrado por SR_MANAGER ───────
-# Tabela dedicada de goals por driver — usa SR_MANAGER do lookup para escopo
+# ── QUERY DRIVER: DM_CX_NPS_CS_GOALS_MGR_AND_UP — todos os Buyers ─────────────
+# Usa exatamente a base indicada pelo usuário: CENTER='BR', sem filtro de SR_MANAGER
+# FLAG_QUARTER_MONTH distingue granularidade: MONTH → mensal, WEEK → semanal
 QUERY_DRIVER = """
 SELECT
   i.DRIVER_TARGET_NPS                                               AS DRIVER,
+  a.NPS_TARGET_DRIVER_GROUP,
   i.CX_TEAM_NAME,
   i.CX_USER_TEAM_CHANNEL,
   i.CX_USER_OFFICE,
   i.PRO_PROCESS_NAME,
-  FORMAT_DATE('%Y-%m-%d', DATE_TRUNC(i.DATE_ID, MONTH))            AS PERIODO,
+  FORMAT_DATE('%Y-%m-%d', i.DATE_ID)                               AS PERIODO,
   'MES'                                                              AS TIPO,
   CAST(SUM(i.SURVEYS) AS INT64)                                     AS ENCUESTAS,
   ROUND((SUM(i.PROMOTERS) - SUM(i.DETRACTORS)) * 100.0
@@ -341,26 +343,27 @@ SELECT
   ROUND(AVG(i.TARGET_NPS) * 100, 2)                                AS TARGET,
   CAST(SUM(i.DETRACTORS) AS INT64)                                  AS DETRATORES
 FROM `meli-bi-data.WHOWNER.DM_CX_NPS_CS_GOALS_MGR_AND_UP` i
-INNER JOIN (
-  SELECT DISTINCT NPS_TARGET_DRIVER
+LEFT JOIN (
+  SELECT NPS_TARGET_DRIVER, ANY_VALUE(NPS_TARGET_DRIVER_GROUP) AS NPS_TARGET_DRIVER_GROUP
   FROM `meli-bi-data.WHOWNER.LK_CX_NPS_CS_GOALS_DRIVER_MANAGER`
-  WHERE SR_MANAGER = 'Nathalie Valente'
-) lk ON i.DRIVER_TARGET_NPS = lk.NPS_TARGET_DRIVER
-WHERE i.DATE_ID >= DATE_TRUNC(DATE_SUB(CURRENT_DATE(), INTERVAL 5 MONTH), MONTH)
+  GROUP BY 1
+) a ON i.DRIVER_TARGET_NPS = a.NPS_TARGET_DRIVER
+WHERE i.DATE_ID >= '2026-01-01'
   AND i.CENTER = 'BR'
   AND i.FLAG_QUARTER_MONTH = 'MONTH'
   AND i.SURVEYS > 0
-GROUP BY 1, 2, 3, 4, 5, 6, 7
+GROUP BY 1, 2, 3, 4, 5, 6, 7, 8
 
 UNION ALL
 
 SELECT
   i.DRIVER_TARGET_NPS                                               AS DRIVER,
+  a.NPS_TARGET_DRIVER_GROUP,
   i.CX_TEAM_NAME,
   i.CX_USER_TEAM_CHANNEL,
   i.CX_USER_OFFICE,
   i.PRO_PROCESS_NAME,
-  FORMAT_DATE('%Y-%m-%d', DATE_TRUNC(i.DATE_ID, ISOWEEK))          AS PERIODO,
+  FORMAT_DATE('%Y-%m-%d', i.DATE_ID)                               AS PERIODO,
   'SEMANA'                                                           AS TIPO,
   CAST(SUM(i.SURVEYS) AS INT64)                                     AS ENCUESTAS,
   ROUND((SUM(i.PROMOTERS) - SUM(i.DETRACTORS)) * 100.0
@@ -368,16 +371,16 @@ SELECT
   ROUND(AVG(i.TARGET_NPS) * 100, 2)                                AS TARGET,
   CAST(SUM(i.DETRACTORS) AS INT64)                                  AS DETRATORES
 FROM `meli-bi-data.WHOWNER.DM_CX_NPS_CS_GOALS_MGR_AND_UP` i
-INNER JOIN (
-  SELECT DISTINCT NPS_TARGET_DRIVER
+LEFT JOIN (
+  SELECT NPS_TARGET_DRIVER, ANY_VALUE(NPS_TARGET_DRIVER_GROUP) AS NPS_TARGET_DRIVER_GROUP
   FROM `meli-bi-data.WHOWNER.LK_CX_NPS_CS_GOALS_DRIVER_MANAGER`
-  WHERE SR_MANAGER = 'Nathalie Valente'
-) lk ON i.DRIVER_TARGET_NPS = lk.NPS_TARGET_DRIVER
+  GROUP BY 1
+) a ON i.DRIVER_TARGET_NPS = a.NPS_TARGET_DRIVER
 WHERE i.DATE_ID >= DATE_SUB(CURRENT_DATE(), INTERVAL 3 WEEK)
   AND i.CENTER = 'BR'
   AND i.FLAG_QUARTER_MONTH = 'WEEK'
   AND i.SURVEYS > 0
-GROUP BY 1, 2, 3, 4, 5, 6, 7
+GROUP BY 1, 2, 3, 4, 5, 6, 7, 8
 
 ORDER BY 1, 2, 3, 4, 5
 """
@@ -626,13 +629,14 @@ def main():
         print(f"[{datetime.now():%H:%M:%S}]   AVISO: Query Solução falhou: {e}")
         solucao_data = []
 
-    # Query Driver — DM_CX_NPS_CS_GOALS_MGR_AND_UP filtrado por SR_MANAGER
+    # Query Driver — DM_CX_NPS_CS_GOALS_MGR_AND_UP (todos os Buyers, CENTER=BR)
     driver_data = []
     try:
         rows_driver = run_query(client, "Query Driver: por DRIVER_TARGET_NPS", QUERY_DRIVER)
         driver_data = [
             {
                 "driver":   r.DRIVER,
+                "group":    r.NPS_TARGET_DRIVER_GROUP,
                 "team":     r.CX_TEAM_NAME,
                 "ch":       r.CX_USER_TEAM_CHANNEL,
                 "office":   r.CX_USER_OFFICE,
