@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Waterfall Buyers — NPS Driver</title>
+<title>Waterfall Sellers — NPS Driver</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <script src="data.js"></script>
@@ -105,10 +105,10 @@ tr:hover td{background:#FAFAFA}
 <div class="topbar">
   <div class="topbar-logo">mercadolibre</div>
   <div class="topbar-sep"></div>
-  <div class="topbar-title">Waterfall Drivers — <strong>BUYER</strong></div>
+  <div class="topbar-title">Waterfall Drivers — <strong>SELLER</strong></div>
   <div class="topbar-right">
     <div class="topbar-period" id="topbar-period">—</div>
-    <a class="topbar-link" href="waterfall_sellers.html">🛒 Seller</a>
+    <a class="topbar-link" href="waterfall_drivers.html">🛍️ Buyer</a>
     <a class="topbar-link" href="waterfall_impactos.html">← Impactos</a>
     <a class="topbar-link" href="index.html">← Voltar</a>
   </div>
@@ -241,35 +241,47 @@ let activeTab   = 'driver';
 
 const CH_LABEL = { 'MULTICANAL C2C':'C2C', 'MULTICANAL CHAT':'Chat', 'OFFLINE':'Offline' };
 
-// ── BUYERS DRIVERS — lista fixa dos 11 drivers da aba Buyers ─────────────────
+// ── SELLERS DRIVERS — lista fixa dos 17 drivers da aba Seller ─────────────────
 const BUYERS_DRIVERS = new Set([
   'ME Comprador',
   'Mediaciones Comprador',
+  'Mediaciones Vendedor',
   'ML Comprador',
   'MP Comprador',
   'PCF Comprador: Durante la entrega',
   'PCF Comprador: Posterior a la entrega',
   'PDD DS&XD - Comprador',
+  'PDD DS&XD - Vendedor',
   'PDD FBM - Comprador',
+  'PDD FBM - Vendedor',
   'PDD MP,FLEX & CBT - Comprador',
+  'PDD MP,FLEX & CBT - Vendedor',
   'PNR ME - Comprador',
+  'PNR ME - Vendedor',
   'PNR MP - Comprador',
+  'PNR MP - Vendedor',
 ]);
 
-// ── BASELINE FIXO POR DRIVER (Buyers) ────────────────────────────────────────
+// ── BASELINE FIXO POR DRIVER (Sellers) ───────────────────────────────────────
 // Pesos fixos (%) para cálculo de contribuição — nunca mudam com filtros
 const DRIVER_BASELINE = {
-  'ME Comprador':                        28.84,
-  'Mediaciones Comprador':                0.27,
-  'ML Comprador':                         6.98,
-  'MP Comprador':                         5.40,
-  'PCF Comprador: Durante la entrega':    1.03,
-  'PCF Comprador: Posterior a la entrega':20.32,
-  'PDD DS&XD - Comprador':               13.22,
-  'PDD FBM - Comprador':                 13.79,
-  'PDD MP,FLEX & CBT - Comprador':        3.74,
-  'PNR ME - Comprador':                   3.43,
-  'PNR MP - Comprador':                   2.97,
+  'ME Comprador':                        27.85,
+  'Mediaciones Comprador':                0.26,
+  'Mediaciones Vendedor':                 0.12,
+  'ML Comprador':                         6.74,
+  'MP Comprador':                         5.21,
+  'PCF Comprador: Durante la entrega':    1.00,
+  'PCF Comprador: Posterior a la entrega':19.62,
+  'PDD DS&XD - Comprador':               12.76,
+  'PDD DS&XD - Vendedor':                 1.92,
+  'PDD FBM - Comprador':                 13.32,
+  'PDD FBM - Vendedor':                   0.42,
+  'PDD MP,FLEX & CBT - Comprador':        3.61,
+  'PDD MP,FLEX & CBT - Vendedor':         0.20,
+  'PNR ME - Comprador':                   3.32,
+  'PNR ME - Vendedor':                    0.37,
+  'PNR MP - Comprador':                   2.87,
+  'PNR MP - Vendedor':                    0.41,
 };
 
 // Retorna peso (0–1) para um driver. Null se não estiver no baseline.
