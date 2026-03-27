@@ -66,6 +66,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .heatmap-table td{padding:5px 6px;text-align:center;border:1px solid #F5F5F5;font-weight:700;font-size:11px;border-radius:0;cursor:default;transition:opacity .15s}
 .heatmap-table td.row-label{text-align:left;font-weight:600;color:#555;padding:5px 10px;background:#FAFAFA;font-size:11px;white-space:nowrap}
 .heatmap-table tr:hover td{opacity:.85}
+/* Nova escala: acima de 5% já é amarelo/vermelho */
 .heat-0{background:#E6F9F1;color:#00A650}
 .heat-1{background:#FFF9C4;color:#856404}
 .heat-2{background:#FFE0C0;color:#C05000}
@@ -80,6 +81,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
 /* SCATTER */
 .scatter-wrap{position:relative;height:340px}
+
+/* WATERFALL */
+.waterfall-wrap{position:relative;height:360px}
 
 /* MANAGER RANKING */
 .manager-list{display:flex;flex-direction:column;gap:6px}
@@ -135,18 +139,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .conc-val{font-size:11px;font-weight:800;min-width:44px;text-align:right;color:#F23D4F}
 .conc-pct-num{font-size:10px;color:#aaa;min-width:36px;text-align:right}
 
-/* SENIORITY COMPARE */
-.sen-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:14px}
-.sen-tile{border-radius:8px;padding:14px;text-align:center}
-.sen-tile .st-name{font-size:11px;font-weight:700;color:#555;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sen-tile .st-val{font-size:26px;font-weight:800;line-height:1}
-.sen-tile .st-sub{font-size:10px;color:#aaa;margin-top:4px}
-.sen-tile.st-danger{background:#FFF5F5;border:1.5px solid #FEECEF}
-.sen-tile.st-danger .st-val{color:#F23D4F}
-.sen-tile.st-warn{background:#FFFBEB;border:1.5px solid #FEF3C7}
-.sen-tile.st-warn .st-val{color:#B45309}
-.sen-tile.st-ok{background:#E6F9F1;border:1.5px solid #BBF7D0}
-.sen-tile.st-ok .st-val{color:#00A650}
+/* SENIORITY SIMPLE */
+.sen-table{border-collapse:collapse;width:100%;margin-top:14px}
+.sen-table th{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:#999;padding:6px 10px;border-bottom:2px solid #F0F0F0;text-align:left}
+.sen-table td{padding:7px 10px;border-bottom:1px solid #F7F7F7;font-size:11px;vertical-align:middle}
+.sen-table tr:hover td{background:#FAFAFA}
+.sen-table td.tr{text-align:right}
 
 /* TABS */
 .tabs-nav{background:#fff;border-radius:10px 10px 0 0;border-bottom:2px solid #E8E8E8;padding:0 20px;display:flex;overflow-x:auto;box-shadow:0 1px 3px rgba(0,0,0,.05);margin-bottom:0}
@@ -156,14 +154,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .tab-content{display:none;background:#fff;border-radius:0 0 10px 10px;padding:18px 20px 20px;box-shadow:0 1px 3px rgba(0,0,0,.05);margin-bottom:16px}
 .tab-content.active{display:block}
 
-/* IMPORT */
-.import-box{background:#F8F8F8;border:1.5px dashed #D0D0D0;border-radius:10px;padding:20px 24px;text-align:center;margin-bottom:16px}
-.import-box h3{font-size:14px;font-weight:700;color:#333;margin-bottom:6px}
-.import-box p{font-size:12px;color:#888;margin-bottom:14px;line-height:1.6}
-.sql-block{background:#1E1E1E;color:#D4D4D4;border-radius:8px;padding:14px 16px;text-align:left;font-family:monospace;font-size:10px;white-space:pre-wrap;overflow-x:auto;line-height:1.7;margin-bottom:14px;max-height:180px;overflow-y:auto}
-textarea.import-ta{width:100%;height:110px;border:1.5px solid #E0E0E0;border-radius:8px;padding:10px 12px;font-size:11px;font-family:monospace;resize:vertical;outline:none;margin-top:6px}
-.btn-primary{background:#3483FA;color:#fff;border:none;border-radius:8px;padding:8px 20px;font-size:12px;font-weight:700;cursor:pointer;margin-top:8px}
-.btn-primary:hover{background:#2968C8}
 .empty-msg{font-size:12px;color:#aaa;text-align:center;padding:30px;font-style:italic}
 
 /* DIVIDER */
@@ -220,6 +210,14 @@ textarea.import-ta{width:100%;height:110px;border:1.5px solid #E0E0E0;border-rad
       <option value="ALL">Todos</option>
     </select>
   </div>
+  <div class="fg">
+    <label>Granularidade</label>
+    <select class="fsel" id="f-gran" onchange="render()">
+      <option value="ALL">Todas</option>
+      <option value="MES">Mês</option>
+      <option value="SEMANA">Semana</option>
+    </select>
+  </div>
 </div>
 
 <div class="page">
@@ -230,7 +228,7 @@ textarea.import-ta{width:100%;height:110px;border:1.5px solid #E0E0E0;border-rad
     <div class="kcard danger"><div class="kcard-lbl">Outliers</div><div class="kcard-val" id="kpi-outliers">—</div><div class="kcard-sub">acima do target</div></div>
     <div class="kcard warn"><div class="kcard-lbl">% Outliers</div><div class="kcard-val" id="kpi-pct">—</div><div class="kcard-sub">KPI principal</div><div class="kcard-delta" id="kpi-delta">—</div></div>
     <div class="kcard purple"><div class="kcard-lbl">Equipes Acima Target</div><div class="kcard-val" id="kpi-teams-above">—</div><div class="kcard-sub">de <span id="kpi-teams-total">—</span> equipes</div></div>
-    <div class="kcard ok"><div class="kcard-lbl">Maior Concentração</div><div class="kcard-val" id="kpi-top-office">—</div><div class="kcard-sub" id="kpi-top-office-pct">office com mais outliers</div></div>
+    <div class="kcard ok"><div class="kcard-lbl">Maior Concentração</div><div class="kcard-val" id="kpi-top-team">—</div><div class="kcard-sub" id="kpi-top-team-pct">equipe com maior % outlier</div></div>
   </div>
 
   <!-- MAPA DE CALOR: Office × Equipe -->
@@ -238,7 +236,7 @@ textarea.import-ta{width:100%;height:110px;border:1.5px solid #E0E0E0;border-rad
     <div class="panel-header">
       <div>
         <div class="panel-title">🔥 Mapa de Calor — % Outliers por Office × Equipe</div>
-        <div class="panel-sub">Intensidade da cor = taxa de outlier. Clique em uma célula para filtrar.</div>
+        <div class="panel-sub">Intensidade da cor = taxa de outlier. Verde = abaixo de 5% (target). Clique em uma célula para filtrar.</div>
       </div>
       <div class="panel-toolbar">
         <span style="font-size:10px;font-weight:700;color:#888;text-transform:uppercase">Mostrar</span>
@@ -252,11 +250,11 @@ textarea.import-ta{width:100%;height:110px;border:1.5px solid #E0E0E0;border-rad
       </div>
       <div class="hm-legend" id="hm-legend" style="display:none">
         <span style="font-size:10px;font-weight:700;color:#666">Legenda:</span>
-        <span class="hml-item"><span class="hml-box heat-0"></span>&lt; 10%</span>
-        <span class="hml-item"><span class="hml-box heat-1"></span>10–20%</span>
-        <span class="hml-item"><span class="hml-box heat-2"></span>20–30%</span>
-        <span class="hml-item"><span class="hml-box heat-3"></span>30–40%</span>
-        <span class="hml-item"><span class="hml-box heat-4"></span>&gt; 40%</span>
+        <span class="hml-item"><span class="hml-box heat-0"></span>&lt; 5%</span>
+        <span class="hml-item"><span class="hml-box heat-1"></span>5–10%</span>
+        <span class="hml-item"><span class="hml-box heat-2"></span>10–20%</span>
+        <span class="hml-item"><span class="hml-box heat-3"></span>20–35%</span>
+        <span class="hml-item"><span class="hml-box heat-4"></span>&gt; 35%</span>
       </div>
     </div>
   </div>
@@ -298,7 +296,7 @@ textarea.import-ta{width:100%;height:110px;border:1.5px solid #E0E0E0;border-rad
           <select class="sfsel" id="scatter-dim" onchange="buildScatter()">
             <option value="team">Por Equipe</option>
             <option value="office">Por Office</option>
-            <option value="manager">Por Manager</option>
+            <option value="sr_manager">Por SR Manager</option>
           </select>
         </div>
       </div>
@@ -309,25 +307,45 @@ textarea.import-ta{width:100%;height:110px;border:1.5px solid #E0E0E0;border-rad
 
   </div>
 
-  <!-- TABS PRINCIPAIS -->
-  <div class="tabs-nav">
-    <button class="tab-btn active" onclick="switchTab('managers')" id="tab-btn-managers">👤 Ranking Managers</button>
-    <button class="tab-btn" onclick="switchTab('mom')" id="tab-btn-mom">📅 MoM por Equipe</button>
-    <button class="tab-btn" onclick="switchTab('cdu')" id="tab-btn-cdu">🎯 CDU / Sub-CDU</button>
-    <button class="tab-btn" onclick="switchTab('seniority')" id="tab-btn-seniority">🎓 Senioridade</button>
-    <button class="tab-btn" onclick="switchTab('concentration')" id="tab-btn-concentration">🔎 Concentração</button>
-    <button class="tab-btn" onclick="switchTab('import')" id="tab-btn-import">⬆️ Importar Dados</button>
+  <!-- WATERFALL DE IMPACTO -->
+  <div class="panel">
+    <div class="panel-header">
+      <div>
+        <div class="panel-title">📉 Waterfall de Impacto por Dimensão</div>
+        <div class="panel-sub">Desvio de cada segmento em relação ao target de 5%. Vermelho = acima do target (contribuição negativa). Verde = abaixo.</div>
+      </div>
+      <div class="panel-toolbar">
+        <select class="sfsel" id="waterfall-dim" onchange="buildWaterfall()">
+          <option value="team">Equipe</option>
+          <option value="office">Office</option>
+          <option value="sr_manager">SR Manager</option>
+        </select>
+      </div>
+    </div>
+    <div class="panel-body">
+      <div class="waterfall-wrap"><canvas id="waterfall-chart"></canvas></div>
+    </div>
   </div>
 
-  <!-- TAB: RANKING MANAGERS -->
+  <!-- TABS PRINCIPAIS -->
+  <div class="tabs-nav">
+    <button class="tab-btn active" onclick="switchTab('managers')" id="tab-btn-managers">👤 Ranking</button>
+    <button class="tab-btn" onclick="switchTab('mom')" id="tab-btn-mom">📅 MoM</button>
+    <button class="tab-btn" onclick="switchTab('cdu')" id="tab-btn-cdu">🎯 CDU</button>
+    <button class="tab-btn" onclick="switchTab('subcdu')" id="tab-btn-subcdu">🔖 Sub-CDU</button>
+    <button class="tab-btn" onclick="switchTab('solution')" id="tab-btn-solution">💡 Solução</button>
+    <button class="tab-btn" onclick="switchTab('seniority')" id="tab-btn-seniority">🎓 Senioridade</button>
+    <button class="tab-btn" onclick="switchTab('concentration')" id="tab-btn-concentration">🔎 Concentração</button>
+  </div>
+
+  <!-- TAB: RANKING -->
   <div class="tab-content active" id="tab-managers">
-    <div class="sec-title">Managers ordenados por % de outlier (maior → menor)</div>
+    <div class="sec-title">Segmentos ordenados por % de outlier (maior → menor)</div>
     <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
       <select class="sfsel" id="mgr-group" onchange="buildManagers()">
-        <option value="manager">Manager</option>
-        <option value="sr_manager">SR Manager</option>
         <option value="team">Equipe</option>
         <option value="office">Office</option>
+        <option value="sr_manager">SR Manager</option>
       </select>
       <select class="sfsel" id="mgr-sort" onchange="buildManagers()">
         <option value="pct">Ordenar por % Outlier</option>
@@ -351,7 +369,7 @@ textarea.import-ta{width:100%;height:110px;border:1.5px solid #E0E0E0;border-rad
       <select class="sfsel" id="mom-group" onchange="buildMoM()">
         <option value="team">Por Equipe</option>
         <option value="office">Por Office</option>
-        <option value="manager">Por Manager</option>
+        <option value="sr_manager">Por SR Manager</option>
       </select>
       <select class="sfsel" id="mom-sort" onchange="buildMoM()">
         <option value="delta_desc">Maior piora primeiro</option>
@@ -366,8 +384,8 @@ textarea.import-ta{width:100%;height:110px;border:1.5px solid #E0E0E0;border-rad
             <th>Segmento</th>
             <th class="tr">Casos (Atual)</th>
             <th class="tr">Outliers (Atual)</th>
-            <th class="tr">% Outlier Atual</th>
-            <th class="tr">% Outlier M-1</th>
+            <th class="tr" id="mom-th-cur">% Outlier Atual</th>
+            <th class="tr" id="mom-th-prev">% Outlier M-1</th>
             <th class="tr">Variação</th>
             <th class="tr">Tendência</th>
           </tr>
@@ -381,28 +399,21 @@ textarea.import-ta{width:100%;height:110px;border:1.5px solid #E0E0E0;border-rad
 
   <!-- TAB: CDU -->
   <div class="tab-content" id="tab-cdu">
-    <div class="sec-title">Processos e CDUs com maior taxa de recontato fora do target</div>
+    <div class="sec-title">CDUs com maior taxa de recontato fora do target</div>
     <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap">
-      <select class="sfsel" id="cdu-level" onchange="buildCDU()">
-        <option value="cdu">CDU</option>
-        <option value="subcdu">Sub-CDU</option>
-        <option value="process">Processo</option>
-        <option value="solution">Solução</option>
-      </select>
       <select class="sfsel" id="cdu-sort" onchange="buildCDU()">
         <option value="outliers">Vol. Outliers ↓</option>
         <option value="pct">% Outlier ↓</option>
         <option value="total">Volume Total ↓</option>
       </select>
-      <input type="text" id="cdu-search" placeholder="Buscar..." style="padding:4px 9px;border:1.5px solid #E0E0E0;border-radius:6px;font-size:11px;outline:none;min-width:150px" oninput="buildCDU()">
+      <input type="text" id="cdu-search" placeholder="Buscar CDU..." style="padding:4px 9px;border:1.5px solid #E0E0E0;border-radius:6px;font-size:11px;outline:none;min-width:150px" oninput="buildCDU()">
     </div>
     <div style="overflow-x:auto">
       <table class="cdu-table" id="cdu-table">
         <thead>
           <tr>
             <th>#</th>
-            <th>Nome</th>
-            <th>Tipo</th>
+            <th>CDU</th>
             <th class="tr">Cases Total</th>
             <th class="tr">Outliers</th>
             <th class="tr">% Outlier</th>
@@ -411,7 +422,69 @@ textarea.import-ta{width:100%;height:110px;border:1.5px solid #E0E0E0;border-rad
           </tr>
         </thead>
         <tbody id="cdu-tbody">
-          <tr><td colspan="8" class="empty-msg">Carregue os dados.</td></tr>
+          <tr><td colspan="7" class="empty-msg">Carregue os dados.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- TAB: Sub-CDU -->
+  <div class="tab-content" id="tab-subcdu">
+    <div class="sec-title">Sub-CDUs com maior taxa de recontato fora do target</div>
+    <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+      <select class="sfsel" id="subcdu-sort" onchange="buildSubCDU()">
+        <option value="outliers">Vol. Outliers ↓</option>
+        <option value="pct">% Outlier ↓</option>
+        <option value="total">Volume Total ↓</option>
+      </select>
+      <input type="text" id="subcdu-search" placeholder="Buscar Sub-CDU..." style="padding:4px 9px;border:1.5px solid #E0E0E0;border-radius:6px;font-size:11px;outline:none;min-width:150px" oninput="buildSubCDU()">
+    </div>
+    <div style="overflow-x:auto">
+      <table class="cdu-table" id="subcdu-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Sub-CDU</th>
+            <th class="tr">Cases Total</th>
+            <th class="tr">Outliers</th>
+            <th class="tr">% Outlier</th>
+            <th class="tr">% do Total Outliers</th>
+            <th class="tr">Pareto Acum.</th>
+          </tr>
+        </thead>
+        <tbody id="subcdu-tbody">
+          <tr><td colspan="7" class="empty-msg">Carregue os dados.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- TAB: SOLUÇÃO -->
+  <div class="tab-content" id="tab-solution">
+    <div class="sec-title">Soluções com maior taxa de recontato fora do target</div>
+    <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+      <select class="sfsel" id="solution-sort" onchange="buildSolution()">
+        <option value="outliers">Vol. Outliers ↓</option>
+        <option value="pct">% Outlier ↓</option>
+        <option value="total">Volume Total ↓</option>
+      </select>
+      <input type="text" id="solution-search" placeholder="Buscar Solução..." style="padding:4px 9px;border:1.5px solid #E0E0E0;border-radius:6px;font-size:11px;outline:none;min-width:150px" oninput="buildSolution()">
+    </div>
+    <div style="overflow-x:auto">
+      <table class="cdu-table" id="solution-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Solução</th>
+            <th class="tr">Cases Total</th>
+            <th class="tr">Outliers</th>
+            <th class="tr">% Outlier</th>
+            <th class="tr">% do Total Outliers</th>
+            <th class="tr">Pareto Acum.</th>
+          </tr>
+        </thead>
+        <tbody id="solution-tbody">
+          <tr><td colspan="7" class="empty-msg">Carregue os dados.</td></tr>
         </tbody>
       </table>
     </div>
@@ -420,10 +493,20 @@ textarea.import-ta{width:100%;height:110px;border:1.5px solid #E0E0E0;border-rad
   <!-- TAB: SENIORIDADE -->
   <div class="tab-content" id="tab-seniority">
     <div class="sec-title">% Outlier por faixa de senioridade do agente</div>
-    <div class="sen-grid" id="sen-grid">
-      <div class="empty-msg" style="grid-column:1/-1">Carregue os dados.</div>
-    </div>
-    <div style="position:relative;height:280px;margin-top:8px"><canvas id="sen-chart"></canvas></div>
+    <div style="position:relative;height:280px;margin-bottom:16px"><canvas id="sen-chart"></canvas></div>
+    <table class="sen-table" id="sen-table">
+      <thead>
+        <tr>
+          <th>Faixa</th>
+          <th class="tr">Total Casos</th>
+          <th class="tr">Outliers</th>
+          <th class="tr">% Outlier</th>
+        </tr>
+      </thead>
+      <tbody id="sen-tbody">
+        <tr><td colspan="4" class="empty-msg">Carregue os dados.</td></tr>
+      </tbody>
+    </table>
   </div>
 
   <!-- TAB: CONCENTRAÇÃO -->
@@ -433,7 +516,7 @@ textarea.import-ta{width:100%;height:110px;border:1.5px solid #E0E0E0;border-rad
       <select class="sfsel" id="conc-dim" onchange="buildConcentration()">
         <option value="team">Por Equipe</option>
         <option value="office">Por Office</option>
-        <option value="manager">Por Manager</option>
+        <option value="sr_manager">Por SR Manager</option>
         <option value="process">Por Processo</option>
       </select>
       <span style="font-size:11px;color:#888;align-self:center">Barras azuis = casos totais · Barras vermelhas = outliers</span>
@@ -443,88 +526,68 @@ textarea.import-ta{width:100%;height:110px;border:1.5px solid #E0E0E0;border-rad
     </div>
   </div>
 
-  <!-- TAB: IMPORT -->
-  <div class="tab-content" id="tab-import">
-    <div class="import-box">
-      <h3>Importar resultado da query BigQuery</h3>
-      <p>Execute a query abaixo no BigQuery, exporte como JSON (array de objetos) e cole aqui.<br>Cada linha deve conter os campos: <code>DATE_ID, CX_TEAM_NAME, USER_OFFICE, CANAL, CS_MANAGER, CS_SR_MANAGER, USER_AGE_SUBGROUP_NAME, NUMERATOR, DENOMINATOR, PROCESS_NAME_LIST, SOLUTION_NAME_LIST, CDU_LIST, SUB_CDU_LIST</code></p>
-      <div class="sql-block" id="sql-display">-- A query utilizada para geração deste relatório está disponível na documentação.</div>
-      <textarea class="import-ta" id="json-input" placeholder='[{"DATE_ID":"2025-02-01","CX_TEAM_NAME":"BR_Buyers_Pre_Entrega","USER_OFFICE":"TP","CANAL":"OFFLINE","CS_MANAGER":"fulano","CS_SR_MANAGER":"ciclano","USER_AGE_SUBGROUP_NAME":"Expert","NUMERATOR":50,"DENOMINATOR":200,"PROCESS_NAME_LIST":["P1","P2"],"CDU_LIST":["CDU A"],"SUB_CDU_LIST":["Sub A"],"SOLUTION_NAME_LIST":["Sol X"]}]'></textarea>
-      <br>
-      <button class="btn-primary" onclick="importData()">Carregar Dados</button>
-      <button style="margin-left:8px;padding:8px 16px;border:1.5px solid #E0E0E0;border-radius:8px;background:#fff;font-size:12px;font-weight:700;cursor:pointer;color:#666" onclick="loadSampleData()">Carregar Dados de Exemplo</button>
-    </div>
-    <div id="import-status" style="font-size:12px;color:#00A650;font-weight:600;margin-top:4px;display:none"></div>
-  </div>
-
 </div><!-- /page -->
 
 <script>
 Chart.register(ChartDataLabels);
 Chart.defaults.set('plugins.datalabels',{display:false});
 
-// ── ESTADO ──────────────────────────────────────────────────────────────────
-let RAW  = [];        // dados brutos importados
-let DATA = [];        // dados filtrados
+// ── CONSTANTES ────────────────────────────────────────────────────────────────
+const TARGET = 0.05;
+
+// ── ESTADO ────────────────────────────────────────────────────────────────────
+let RAW  = [];
+let DATA = [];
 let hmMode = 'pct';
-let paretoChart = null, scatterChart = null, senChart = null;
+let paretoChart = null, scatterChart = null, senChart = null, waterfallChart = null;
 const MONTH_LABELS = {
   '01':'Jan','02':'Fev','03':'Mar','04':'Abr','05':'Mai','06':'Jun',
   '07':'Jul','08':'Ago','09':'Set','10':'Out','11':'Nov','12':'Dez'
 };
 
-// ── FILTROS ──────────────────────────────────────────────────────────────────
+// ── FILTROS ───────────────────────────────────────────────────────────────────
 function getFilters(){
   return {
-    team:     document.getElementById('f-team').value,
-    office:   document.getElementById('f-office').value,
-    canal:    document.getElementById('f-canal').value,
-    srmanager:document.getElementById('f-srmanager').value
+    team:      document.getElementById('f-team').value,
+    office:    document.getElementById('f-office').value,
+    canal:     document.getElementById('f-canal').value,
+    srmanager: document.getElementById('f-srmanager').value,
+    gran:      document.getElementById('f-gran').value
   };
 }
 
 function applyFilters(){
   const f = getFilters();
   DATA = RAW.filter(r=>{
-    if(f.team     !=='ALL' && r.team     !== f.team)      return false;
-    if(f.office   !=='ALL' && r.office   !== f.office)    return false;
-    if(f.canal    !=='ALL' && r.canal    !== f.canal)      return false;
-    if(f.srmanager!=='ALL' && r.srmanager!== f.srmanager)  return false;
+    if(f.team      !=='ALL' && r.team      !== f.team)      return false;
+    if(f.office    !=='ALL' && r.office    !== f.office)    return false;
+    if(f.canal     !=='ALL' && r.canal     !== f.canal)     return false;
+    if(f.srmanager !=='ALL' && r.srmanager !== f.srmanager) return false;
+    if(f.gran      !=='ALL' && r.granularity !== f.gran)    return false;
     return true;
   });
 }
 
-// ── IMPORT ───────────────────────────────────────────────────────────────────
-function importData(){
-  const raw = document.getElementById('json-input').value.trim();
-  if(!raw){ alert('Cole o JSON exportado do BigQuery.'); return; }
-  let parsed;
-  try{ parsed = JSON.parse(raw); }
-  catch(e){ alert('JSON inválido: '+e.message); return; }
-  processImport(parsed);
-}
-
+// ── IMPORT ────────────────────────────────────────────────────────────────────
 function processImport(parsed){
   RAW = parsed.map(r=>({
-    date:     r.DATE_ID ? r.DATE_ID.substring(0,7) : '????-??',
-    team:     r.CX_TEAM_NAME || '(sem equipe)',
-    office:   r.USER_OFFICE  || '(sem office)',
-    canal:    r.CANAL        || '(sem canal)',
-    manager:  r.CS_MANAGER   || '(sem manager)',
-    srmanager:r.CS_SR_MANAGER|| '(sem SR manager)',
-    seniority:r.USER_AGE_SUBGROUP_NAME || '(sem dado)',
-    num:      Number(r.NUMERATOR   ||0),
-    den:      Number(r.DENOMINATOR ||0),
-    processes:Array.isArray(r.PROCESS_NAME_LIST)  ? r.PROCESS_NAME_LIST  : [],
-    solutions:Array.isArray(r.SOLUTION_NAME_LIST) ? r.SOLUTION_NAME_LIST : [],
-    cdus:     Array.isArray(r.CDU_LIST)            ? r.CDU_LIST            : [],
-    subcdus:  Array.isArray(r.SUB_CDU_LIST)        ? r.SUB_CDU_LIST        : [],
+    date:        r.DATE_ID ? r.DATE_ID.substring(0,7) : '????-??',
+    team:        r.CX_TEAM_NAME || '(sem equipe)',
+    office:      r.USER_OFFICE  || '(sem office)',
+    canal:       r.CANAL        || '(sem canal)',
+    manager:     r.CS_MANAGER   || '(sem manager)',
+    srmanager:   r.CS_SR_MANAGER|| '(sem SR manager)',
+    seniority:   r.USER_AGE_SUBGROUP_NAME || '(sem dado)',
+    granularity: r.GRANULARITY  || 'MES',
+    num:         Number(r.NUMERATOR   ||0),
+    den:         Number(r.DENOMINATOR ||0),
+    processes:   Array.isArray(r.PROCESS_NAME_LIST)  ? r.PROCESS_NAME_LIST  : [],
+    solutions:   Array.isArray(r.SOLUTION_NAME_LIST) ? r.SOLUTION_NAME_LIST : [],
+    cdus:        Array.isArray(r.CDU_LIST)            ? r.CDU_LIST            : [],
+    subcdus:     Array.isArray(r.SUB_CDU_LIST)        ? r.SUB_CDU_LIST        : [],
   }));
   populateFilterOptions();
   render();
-  const st = document.getElementById('import-status');
-  st.style.display='block';
-  st.textContent = `✓ ${RAW.length} linhas carregadas com sucesso.`;
 }
 
 function populateFilterOptions(){
@@ -532,10 +595,10 @@ function populateFilterOptions(){
   const offices    = [...new Set(RAW.map(r=>r.office))].sort();
   const canais     = [...new Set(RAW.map(r=>r.canal))].sort();
   const srmanagers = [...new Set(RAW.map(r=>r.srmanager))].sort();
-  fillSel('f-team',     teams,     'Todas');
-  fillSel('f-office',   offices,   'Todos');
-  fillSel('f-canal',    canais,    'Todos');
-  fillSel('f-srmanager',srmanagers,'Todos');
+  fillSel('f-team',      teams,      'Todas');
+  fillSel('f-office',    offices,    'Todos');
+  fillSel('f-canal',     canais,     'Todos');
+  fillSel('f-srmanager', srmanagers, 'Todos');
 }
 
 function fillSel(id, opts, allLabel){
@@ -546,7 +609,7 @@ function fillSel(id, opts, allLabel){
   if(opts.includes(cur)) sel.value=cur;
 }
 
-// ── AGGREGATION HELPER ───────────────────────────────────────────────────────
+// ── AGGREGATION HELPER ────────────────────────────────────────────────────────
 function groupBy(rows, keyFn){
   const map = {};
   rows.forEach(r=>{
@@ -564,7 +627,7 @@ function groupBy(rows, keyFn){
   }));
 }
 
-// ── RENDER PRINCIPAL ─────────────────────────────────────────────────────────
+// ── RENDER PRINCIPAL ──────────────────────────────────────────────────────────
 function render(){
   applyFilters();
   if(!DATA.length) return;
@@ -572,9 +635,12 @@ function render(){
   buildHeatmap();
   buildPareto();
   buildScatter();
+  buildWaterfall();
   buildManagers();
   buildMoM();
   buildCDU();
+  buildSubCDU();
+  buildSolution();
   buildSeniority();
   buildConcentration();
   updateTopbar();
@@ -588,13 +654,13 @@ function updateTopbar(){
   }
 }
 
-// ── KPIs ─────────────────────────────────────────────────────────────────────
+// ── KPIs ──────────────────────────────────────────────────────────────────────
 function buildKPIs(){
   const totalNum = DATA.reduce((s,r)=>s+r.num,0);
   const totalDen = DATA.reduce((s,r)=>s+r.den,0);
   const pct = totalDen>0 ? totalNum/totalDen : 0;
 
-  // mês anterior (se existir)
+  // mês anterior usando RAW diretamente
   const dates = [...new Set(RAW.map(r=>r.date))].sort();
   let deltaHtml = '<span class="delta-neu">sem dado anterior</span>';
   if(dates.length>=2){
@@ -609,14 +675,12 @@ function buildKPIs(){
     deltaHtml = `<span class="${cls}">${sign} ${(Math.abs(delta)*100).toFixed(1)}pp vs. mês anterior</span>`;
   }
 
-  // teams above
+  // teams above TARGET
   const byTeam = groupBy(DATA, r=>r.team);
-  // We don't have a single target value in data. Use 20% as reference threshold.
-  const TARGET_REF = 0.20;
-  const teamsAbove = byTeam.filter(t=>t.pct>TARGET_REF).length;
+  const teamsAbove = byTeam.filter(t=>t.pct>TARGET).length;
 
-  // top office by outlier volume
-  const byOffice = groupBy(DATA, r=>r.office).sort((a,b)=>b.num-a.num);
+  // equipe com MAIOR % de outlier (não maior volume)
+  const byTeamSorted = [...byTeam].sort((a,b)=>b.pct-a.pct);
 
   document.getElementById('kpi-total').textContent     = fmtNum(totalDen);
   document.getElementById('kpi-outliers').textContent  = fmtNum(totalNum);
@@ -624,13 +688,15 @@ function buildKPIs(){
   document.getElementById('kpi-delta').innerHTML       = deltaHtml;
   document.getElementById('kpi-teams-above').textContent = teamsAbove;
   document.getElementById('kpi-teams-total').textContent = byTeam.length;
-  if(byOffice.length){
-    document.getElementById('kpi-top-office').textContent    = byOffice[0].key;
-    document.getElementById('kpi-top-office-pct').textContent= fmtNum(byOffice[0].num)+' outliers';
+  if(byTeamSorted.length){
+    const top = byTeamSorted[0];
+    const lbl = top.key.replace('BR_','').replace(/_/g,' ');
+    document.getElementById('kpi-top-team').textContent    = lbl.length>14 ? lbl.substring(0,12)+'…' : lbl;
+    document.getElementById('kpi-top-team-pct').textContent= fmtPct(top.pct)+' de outlier';
   }
 }
 
-// ── HEATMAP ──────────────────────────────────────────────────────────────────
+// ── HEATMAP ───────────────────────────────────────────────────────────────────
 function setHmMode(m){
   hmMode=m;
   document.getElementById('hm-btn-pct').classList.toggle('active',m==='pct');
@@ -640,12 +706,11 @@ function setHmMode(m){
 
 function buildHeatmap(){
   const wrap = document.getElementById('heatmap-wrap');
-  const offices = [...new Set(DATA.map(r=>r.office))].sort();
-  const teams   = [...new Set(DATA.map(r=>r.team))].sort().map(t=>t.replace('BR_','').replace(/_/g,' '));
-  const teamsFull = [...new Set(DATA.map(r=>r.team))].sort();
+  const offices    = [...new Set(DATA.map(r=>r.office))].sort();
+  const teamsFull  = [...new Set(DATA.map(r=>r.team))].sort();
+  const teams      = teamsFull.map(t=>t.replace('BR_','').replace(/_/g,' '));
   if(!offices.length||!teamsFull.length){ wrap.innerHTML='<div class="empty-msg">Sem dados para o filtro atual.</div>'; return; }
 
-  // build cell matrix
   const matrix = {};
   DATA.forEach(r=>{
     const k = r.office+'|'+r.team;
@@ -653,9 +718,7 @@ function buildHeatmap(){
     matrix[k].num+=r.num; matrix[k].den+=r.den;
   });
 
-  // max for vol scaling
   const maxVol = Math.max(...Object.values(matrix).map(v=>v.num),1);
-  const maxPct = Math.max(...Object.values(matrix).map(v=>v.den>0?v.num/v.den:0),0.01);
 
   let html = '<table class="heatmap-table"><thead><tr><th class="row-hdr">Office</th>';
   teams.forEach(t=>{ html+=`<th title="${t}">${t.length>14?t.substring(0,12)+'…':t}</th>`; });
@@ -677,12 +740,13 @@ function buildHeatmap(){
   document.getElementById('hm-legend').style.display='flex';
 }
 
+// Nova escala: < 5% verde, 5-10% amarelo, 10-20% laranja, 20-35% vermelho claro, >35% vermelho escuro
 function heatClass(pct){
-  if(pct<0.10) return 'heat-0';
-  if(pct<0.20) return 'heat-1';
-  if(pct<0.30) return 'heat-2';
-  if(pct<0.40) return 'heat-3';
-  return 'heat-4';
+  if(pct < TARGET)   return 'heat-0';  // < 5%
+  if(pct < 0.10)     return 'heat-1';  // 5–10%
+  if(pct < 0.20)     return 'heat-2';  // 10–20%
+  if(pct < 0.35)     return 'heat-3';  // 20–35%
+  return 'heat-4';                     // > 35%
 }
 function heatClassVol(ratio){
   if(ratio<0.10) return 'heat-0';
@@ -698,7 +762,6 @@ function buildPareto(){
   const metric = document.getElementById('pareto-metric')?.value || 'outliers';
   if(!DATA.length) return;
 
-  // explode array fields
   const exploded = [];
   DATA.forEach(r=>{
     const keys = dim==='process' ? r.processes : dim==='cdu' ? r.cdus : r.solutions;
@@ -721,7 +784,7 @@ function buildPareto(){
   let cum=0;
   const paretoLine = items.map(it=>{ cum+=it.num; return Math.round(cum/totalOutliers*100); });
 
-  const labels = items.map(i=>i.key.length>22?i.key.substring(0,20)+'…':i.key);
+  const labels  = items.map(i=>i.key.length>22?i.key.substring(0,20)+'…':i.key);
   const barData = items.map(i=> metric==='pct' ? Math.round(i.pct*1000)/10 : Math.round(i.num));
 
   if(paretoChart) paretoChart.destroy();
@@ -757,11 +820,10 @@ function buildPareto(){
 function buildScatter(){
   const dim = document.getElementById('scatter-dim')?.value || 'team';
   if(!DATA.length) return;
-  const keyFn = dim==='team' ? r=>r.team : dim==='office' ? r=>r.office : r=>r.manager;
+  const keyFn = dim==='team' ? r=>r.team : dim==='office' ? r=>r.office : r=>r.srmanager;
   const groups = groupBy(DATA, keyFn);
 
   const maxDen = Math.max(...groups.map(g=>g.den),1);
-  const TARGET_REF = 0.20;
 
   const bubbles = groups.filter(g=>g.den>0).map(g=>({
     x: g.den,
@@ -772,7 +834,7 @@ function buildScatter(){
   }));
 
   const colors = bubbles.map(b=>
-    b.y > TARGET_REF*100 ? 'rgba(242,61,79,.65)' : 'rgba(0,166,80,.55)'
+    b.y > TARGET*100 ? 'rgba(242,61,79,.65)' : 'rgba(0,166,80,.55)'
   );
 
   if(scatterChart) scatterChart.destroy();
@@ -807,40 +869,95 @@ function buildScatter(){
       }
     }
   });
-
-  // linha de referência
-  scatterChart.options.plugins.annotation = {};
 }
 
-// ── MANAGER RANKING ───────────────────────────────────────────────────────────
+// ── WATERFALL DE IMPACTO ──────────────────────────────────────────────────────
+function buildWaterfall(){
+  const dim = document.getElementById('waterfall-dim')?.value || 'team';
+  if(!DATA.length) return;
+  const keyFn = dim==='team' ? r=>r.team : dim==='office' ? r=>r.office : r=>r.srmanager;
+  const groups = groupBy(DATA, keyFn).filter(g=>g.den>0);
+  // desvio = pct - TARGET
+  groups.sort((a,b)=>(b.pct-TARGET)-(a.pct-TARGET));
+  const top = groups.slice(0,20);
+
+  const labels  = top.map(g=>g.key.replace('BR_','').replace(/_/g,' '));
+  const desvios = top.map(g=> Math.round((g.pct - TARGET)*1000)/10);
+  const colors  = desvios.map(d=> d > 0 ? 'rgba(242,61,79,.8)' : 'rgba(0,166,80,.75)');
+
+  if(waterfallChart) waterfallChart.destroy();
+  waterfallChart = new Chart(document.getElementById('waterfall-chart'),{
+    type:'bar',
+    data:{
+      labels,
+      datasets:[{
+        label:'Desvio vs Target (pp)',
+        data: desvios,
+        backgroundColor: colors,
+        borderRadius: 4
+      }]
+    },
+    options:{
+      indexAxis:'y',
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        datalabels:{
+          display:true,
+          anchor:'end',
+          align: ctx => ctx.dataset.data[ctx.dataIndex] >= 0 ? 'right' : 'left',
+          formatter: v => (v>=0?'+':'')+v.toFixed(1)+'pp',
+          font:{size:9,weight:'bold'},
+          color: ctx => ctx.dataset.data[ctx.dataIndex] >= 0 ? '#C0192A' : '#00A650'
+        },
+        tooltip:{callbacks:{
+          label: ctx=>`Desvio: ${ctx.raw>=0?'+':''}${ctx.raw.toFixed(1)}pp vs target de ${(TARGET*100).toFixed(0)}%`
+        }}
+      },
+      scales:{
+        x:{
+          title:{display:true,text:'Desvio em pp (positivo = acima do target)',font:{size:10}},
+          ticks:{font:{size:10},callback:v=>(v>=0?'+':'')+v+'pp'},
+          grid:{color:'#F5F5F5'},
+          afterDataLimits: scale => {
+            const max = Math.max(Math.abs(scale.min), Math.abs(scale.max));
+            scale.min = -max * 1.15;
+            scale.max =  max * 1.15;
+          }
+        },
+        y:{ticks:{font:{size:10}}}
+      }
+    }
+  });
+}
+
+// ── MANAGER RANKING ────────────────────────────────────────────────────────────
 function buildManagers(){
-  const groupType  = document.getElementById('mgr-group')?.value  || 'manager';
-  const sortType   = document.getElementById('mgr-sort')?.value   || 'pct';
-  const onlyAbove  = document.getElementById('mgr-only-above')?.checked;
-  const TARGET_REF = 0.20;
-  const list       = document.getElementById('manager-list');
+  const groupType = document.getElementById('mgr-group')?.value  || 'team';
+  const sortType  = document.getElementById('mgr-sort')?.value   || 'pct';
+  const onlyAbove = document.getElementById('mgr-only-above')?.checked;
+  const list      = document.getElementById('manager-list');
   if(!DATA.length){ list.innerHTML='<div class="empty-msg">Carregue os dados.</div>'; return; }
 
-  const keyFn = groupType==='manager' ? r=>r.manager :
-                groupType==='sr_manager' ? r=>r.srmanager :
-                groupType==='team' ? r=>r.team : r=>r.office;
+  const keyFn = groupType==='sr_manager' ? r=>r.srmanager :
+                groupType==='team'       ? r=>r.team : r=>r.office;
   let groups = groupBy(DATA, keyFn);
-  if(onlyAbove) groups = groups.filter(g=>g.pct>TARGET_REF);
+  if(onlyAbove) groups = groups.filter(g=>g.pct>TARGET);
   groups.sort((a,b)=>
-    sortType==='vol'     ? b.den-a.den :
-    sortType==='outliers'? b.num-a.num :
+    sortType==='vol'      ? b.den-a.den :
+    sortType==='outliers' ? b.num-a.num :
     b.pct-a.pct
   );
 
   const maxNum = Math.max(...groups.map(g=>g.num),1);
   const top    = groups.slice(0,30);
   list.innerHTML = top.map((g,i)=>{
-    const pct   = g.pct;
-    const barW  = Math.round(g.num/maxNum*100);
-    const rankCls = pct>0.35?'r1': pct>0.25?'r2': pct>TARGET_REF?'r3': 'rok';
-    const valCls  = pct>0.35?'val-danger': pct>TARGET_REF?'val-warn': 'val-ok';
-    const barCls  = pct>0.35?'bar-danger': pct>TARGET_REF?'bar-warn': 'bar-ok';
-    const lbl     = g.key.replace('BR_','').replace(/_/g,' ');
+    const pct    = g.pct;
+    const barW   = Math.round(g.num/maxNum*100);
+    const rankCls= pct>0.35?'r1': pct>0.20?'r2': pct>TARGET?'r3': 'rok';
+    const valCls = pct>0.35?'val-danger': pct>TARGET?'val-warn': 'val-ok';
+    const barCls = pct>0.35?'bar-danger': pct>TARGET?'bar-warn': 'bar-ok';
+    const lbl    = g.key.replace('BR_','').replace(/_/g,' ');
     return `<div class="mgr-row">
       <div class="mgr-rank ${rankCls}">${i+1}</div>
       <div class="mgr-name">${lbl.length>30?lbl.substring(0,28)+'…':lbl}</div>
@@ -858,29 +975,25 @@ function buildMoM(){
   const tbody     = document.getElementById('mom-tbody');
   if(!RAW.length){ tbody.innerHTML='<tr><td colspan="7" class="empty-msg">Carregue os dados.</td></tr>'; return; }
 
+  // detecta meses distintos em RAW (não em DATA para evitar problema de filtros não populados)
   const dates = [...new Set(RAW.map(r=>r.date))].sort();
   if(dates.length<2){ tbody.innerHTML='<tr><td colspan="7" class="empty-msg">Necessário ao menos 2 meses de dados.</td></tr>'; return; }
 
   const curDate  = dates[dates.length-1];
   const prevDate = dates[dates.length-2];
-  const filters  = getFilters();
-  const filterFn = r=>
-    (filters.team==='ALL'||r.team===filters.team)&&
-    (filters.office==='ALL'||r.office===filters.office)&&
-    (filters.canal==='ALL'||r.canal===filters.canal)&&
-    (filters.srmanager==='ALL'||r.srmanager===filters.srmanager);
 
-  const curRows  = RAW.filter(r=>r.date===curDate  && filterFn(r));
-  const prevRows = RAW.filter(r=>r.date===prevDate && filterFn(r));
+  // usa RAW direto para buscar os períodos, sem filtro de UI
+  const curRows  = RAW.filter(r=>r.date===curDate);
+  const prevRows = RAW.filter(r=>r.date===prevDate);
 
-  const keyFn = groupType==='team'?r=>r.team:groupType==='office'?r=>r.office:r=>r.manager;
+  const keyFn = groupType==='team'?r=>r.team : groupType==='office'?r=>r.office : r=>r.srmanager;
   const curG  = groupBy(curRows,  keyFn);
   const prevG = groupBy(prevRows, keyFn);
   const prevMap = {};
   prevG.forEach(g=>prevMap[g.key]=g);
 
   let rows = curG.map(g=>{
-    const prev = prevMap[g.key];
+    const prev  = prevMap[g.key];
     const delta = prev ? g.pct - prev.pct : null;
     return {...g, prevPct: prev?prev.pct:null, delta};
   });
@@ -897,9 +1010,10 @@ function buildMoM(){
   const prevLbl = (MONTH_LABELS[pm]||pm)+'/'+py;
 
   // update header
-  const ths = document.querySelectorAll('#mom-table thead th');
-  if(ths[3]) ths[3].textContent = `% Outlier ${curLbl}`;
-  if(ths[4]) ths[4].textContent = `% Outlier ${prevLbl}`;
+  const thCur  = document.getElementById('mom-th-cur');
+  const thPrev = document.getElementById('mom-th-prev');
+  if(thCur)  thCur.textContent  = `% Outlier ${curLbl}`;
+  if(thPrev) thPrev.textContent = `% Outlier ${prevLbl}`;
 
   tbody.innerHTML = rows.slice(0,30).map(r=>{
     const lbl = r.key.replace('BR_','').replace(/_/g,' ');
@@ -907,7 +1021,7 @@ function buildMoM(){
       r.delta>0.005 ? `<span class="trend-pill trend-up">▲ +${(r.delta*100).toFixed(1)}pp</span>` :
       r.delta<-0.005? `<span class="trend-pill trend-dn">▼ ${(r.delta*100).toFixed(1)}pp</span>` :
       '<span class="trend-pill trend-neu">→ estável</span>';
-    const pctCls = r.pct>0.30?'val-neg':r.pct>0.20?'val-wrn':'val-pos';
+    const pctCls = r.pct>0.20?'val-neg':r.pct>TARGET?'val-wrn':'val-pos';
     return `<tr>
       <td>${lbl}</td>
       <td class="tr">${fmtNum(r.den)}</td>
@@ -920,17 +1034,16 @@ function buildMoM(){
   }).join('');
 }
 
-// ── CDU ───────────────────────────────────────────────────────────────────────
-function buildCDU(){
-  const level  = document.getElementById('cdu-level')?.value  || 'cdu';
-  const sort   = document.getElementById('cdu-sort')?.value   || 'outliers';
-  const search = (document.getElementById('cdu-search')?.value||'').toLowerCase();
-  const tbody  = document.getElementById('cdu-tbody');
-  if(!DATA.length){ tbody.innerHTML='<tr><td colspan="8" class="empty-msg">Carregue os dados.</td></tr>'; return; }
+// ── HELPER: tabela CDU genérica ────────────────────────────────────────────────
+function buildArrayTab(arrField, sortId, searchId, tbodyId, badgeLabel, badgeCls){
+  const sort   = document.getElementById(sortId)?.value   || 'outliers';
+  const search = (document.getElementById(searchId)?.value||'').toLowerCase();
+  const tbody  = document.getElementById(tbodyId);
+  if(!DATA.length){ tbody.innerHTML=`<tr><td colspan="7" class="empty-msg">Carregue os dados.</td></tr>`; return; }
 
   const exploded = [];
   DATA.forEach(r=>{
-    const arr = level==='cdu'?r.cdus:level==='subcdu'?r.subcdus:level==='process'?r.processes:r.solutions;
+    const arr = r[arrField];
     if(!arr||!arr.length){ exploded.push({key:'(sem dado)',num:r.num,den:r.den}); return; }
     arr.forEach(k=>exploded.push({key:k,num:r.num/arr.length,den:r.den/arr.length}));
   });
@@ -948,17 +1061,14 @@ function buildCDU(){
 
   const totalOut = items.reduce((s,i)=>s+i.num,0);
   let cum=0;
-  const typeLabel = {'cdu':'CDU','subcdu':'Sub-CDU','process':'Processo','solution':'Solução'}[level]||level;
-  const bdgCls    = {'cdu':'bdg-cdu','subcdu':'bdg-sub','process':'bdg-off','solution':'bdg-off'}[level]||'bdg-cdu';
 
   tbody.innerHTML = items.slice(0,40).map((it,i)=>{
     cum+=it.num;
-    const pctCls = it.pct>0.30?'val-neg':it.pct>0.20?'val-wrn':'val-pos';
-    const paretoAcum = totalOut>0?Math.round(cum/totalOut*100):0;
+    const pctCls    = it.pct>0.20?'val-neg':it.pct>TARGET?'val-wrn':'val-pos';
+    const paretoAcum= totalOut>0?Math.round(cum/totalOut*100):0;
     return `<tr>
       <td>${i+1}</td>
       <td>${it.key}</td>
-      <td><span class="badge ${bdgCls}">${typeLabel}</span></td>
       <td class="tr">${fmtNum(it.den)}</td>
       <td class="tr">${fmtNum(it.num)}</td>
       <td class="tr ${pctCls}">${fmtPct(it.pct)}</td>
@@ -968,68 +1078,96 @@ function buildCDU(){
   }).join('');
 }
 
-// ── SENIORIDADE ───────────────────────────────────────────────────────────────
+function buildCDU(){
+  buildArrayTab('cdus','cdu-sort','cdu-search','cdu-tbody','CDU','bdg-cdu');
+}
+
+function buildSubCDU(){
+  buildArrayTab('subcdus','subcdu-sort','subcdu-search','subcdu-tbody','Sub-CDU','bdg-sub');
+}
+
+function buildSolution(){
+  buildArrayTab('solutions','solution-sort','solution-search','solution-tbody','Solução','bdg-off');
+}
+
+// ── SENIORIDADE ────────────────────────────────────────────────────────────────
 function buildSeniority(){
   if(!DATA.length) return;
   const groups = groupBy(DATA, r=>r.seniority).sort((a,b)=>b.pct-a.pct);
-  const TARGET = 0.20;
 
-  // tiles
-  const grid = document.getElementById('sen-grid');
-  grid.innerHTML = groups.map(g=>{
-    const cls = g.pct>0.30?'st-danger': g.pct>TARGET?'st-warn': 'st-ok';
-    return `<div class="sen-tile ${cls}">
-      <div class="st-name">${g.key}</div>
-      <div class="st-val">${fmtPct(g.pct)}</div>
-      <div class="st-sub">${fmtNum(g.num)} outliers / ${fmtNum(g.den)} casos</div>
-    </div>`;
-  }).join('');
-
-  // bar chart
+  // gráfico de barras horizontal simples
   if(senChart) senChart.destroy();
   senChart = new Chart(document.getElementById('sen-chart'),{
     type:'bar',
     data:{
       labels: groups.map(g=>g.key),
-      datasets:[
-        {label:'% Outlier',data:groups.map(g=>Math.round(g.pct*1000)/10),
-         backgroundColor:groups.map(g=>g.pct>0.30?'rgba(242,61,79,.8)':g.pct>TARGET?'rgba(255,119,51,.8)':'rgba(0,166,80,.7)'),
-         yAxisID:'y'},
-        {label:'Volume',data:groups.map(g=>g.den),type:'line',
-         borderColor:'#3483FA',borderWidth:2,pointRadius:4,
-         fill:false,tension:0,yAxisID:'y2'}
-      ]
+      datasets:[{
+        label:'% Outlier',
+        data: groups.map(g=>Math.round(g.pct*1000)/10),
+        backgroundColor: groups.map(g=>
+          g.pct>0.20 ? 'rgba(242,61,79,.8)' :
+          g.pct>TARGET ? 'rgba(255,119,51,.8)' :
+          'rgba(0,166,80,.7)'
+        ),
+        borderRadius: 4
+      }]
     },
     options:{
-      responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{position:'top',labels:{font:{size:10}}},datalabels:{display:false}},
+      indexAxis:'y',
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        datalabels:{
+          display:true,
+          anchor:'end',
+          align:'right',
+          formatter: v=>v.toFixed(1)+'%',
+          font:{size:10,weight:'bold'},
+          color:'#555'
+        }
+      },
       scales:{
-        x:{ticks:{font:{size:10}}},
-        y:{title:{display:true,text:'% Outlier',font:{size:10}},
-           ticks:{font:{size:10},callback:v=>v+'%'},grid:{color:'#F5F5F5'}},
-        y2:{position:'right',title:{display:true,text:'Volume',font:{size:10}},
-            ticks:{font:{size:10}},grid:{display:false}}
+        x:{
+          title:{display:true,text:'% Outlier',font:{size:10}},
+          ticks:{font:{size:10},callback:v=>v+'%'},
+          grid:{color:'#F5F5F5'}
+        },
+        y:{ticks:{font:{size:11}}}
       }
     }
   });
+
+  // tabela simples
+  const tbody = document.getElementById('sen-tbody');
+  tbody.innerHTML = groups.map(g=>{
+    const pctCls = g.pct>0.20?'val-neg':g.pct>TARGET?'val-wrn':'val-pos';
+    return `<tr>
+      <td>${g.key}</td>
+      <td class="tr">${fmtNum(g.den)}</td>
+      <td class="tr">${fmtNum(g.num)}</td>
+      <td class="tr ${pctCls}">${fmtPct(g.pct)}</td>
+    </tr>`;
+  }).join('');
 }
 
-// ── CONCENTRAÇÃO ───────────────────────────────────────────────────────────────
+// ── CONCENTRAÇÃO ────────────────────────────────────────────────────────────────
 function buildConcentration(){
   const dim  = document.getElementById('conc-dim')?.value || 'team';
   const wrap = document.getElementById('conc-list');
   if(!DATA.length){ wrap.innerHTML='<div class="empty-msg">Carregue os dados.</div>'; return; }
 
-  const keyFn = dim==='team'?r=>r.team:dim==='office'?r=>r.office:dim==='manager'?r=>r.manager:r=>(r.processes[0]||'(sem processo)');
+  const keyFn = dim==='team'      ? r=>r.team      :
+                dim==='office'    ? r=>r.office     :
+                dim==='sr_manager'? r=>r.srmanager  :
+                r=>(r.processes[0]||'(sem processo)');
   const groups = groupBy(DATA, keyFn).sort((a,b)=>b.num-a.num);
   const maxDen = Math.max(...groups.map(g=>g.den),1);
-  const maxNum = Math.max(...groups.map(g=>g.num),1);
 
   wrap.innerHTML = groups.slice(0,20).map(g=>{
     const barNumW = Math.round(g.den/maxDen*100);
     const barOutW = Math.round(g.num/maxDen*100);
     const lbl = g.key.replace('BR_','').replace(/_/g,' ');
-    const pctCls = g.pct>0.30?'val-danger':g.pct>0.20?'val-warn':'val-ok';
+    const pctCls = g.pct>0.20?'val-danger':g.pct>TARGET?'val-warn':'val-ok';
     return `<div class="conc-row">
       <div class="conc-label" title="${g.key}">${lbl}</div>
       <div class="conc-bar-wrap" style="position:relative;height:14px">
@@ -1042,7 +1180,7 @@ function buildConcentration(){
   }).join('');
 }
 
-// ── TABS ───────────────────────────────────────────────────────────────────────
+// ── TABS ────────────────────────────────────────────────────────────────────────
 function switchTab(id){
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
   document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
@@ -1050,59 +1188,19 @@ function switchTab(id){
   document.getElementById('tab-'+id).classList.add('active');
 }
 
-// ── DADOS DE EXEMPLO ──────────────────────────────────────────────────────────
-function loadSampleData(){
-  const teams   = ['BR_Buyers_Pre_Entrega','BR_Buyers_Post_Entrega','BR_Buyers_Compra','BR_MED_PNRME_Offline','BR_MED_PNRMP_Offline'];
-  const offices = ['TP','WH','INT','ATE','KTA'];
-  const canais  = ['OFFLINE','MULTICANAL C2C','MULTICANAL CHAT'];
-  const managers= ['Manager_A','Manager_B','Manager_C','Manager_D','Manager_E'];
-  const srmgrs  = ['SR_Norte','SR_Sul','SR_Centro'];
-  const seniorities = ['Rookie','Junior','Mid','Senior','Expert'];
-  const cdus    = ['CDU_Logistica','CDU_Pagamento','CDU_Produto','CDU_Conta','CDU_Entrega'];
-  const subcdus = ['Sub_Rastreio','Sub_Cancelamento','Sub_Troca','Sub_Reembolso','Sub_Cadastro'];
-  const procs   = ['Rastreio de Pedido','Cancelamento','Troca de Produto','Reembolso','Cadastro'];
-  const sols    = ['Solucao_Automatica','Solucao_Manual','Solucao_Escalada'];
-  const dates   = ['2025-01-01','2025-02-01'];
-  const sample  = [];
-  dates.forEach(dt=>{
-    teams.forEach(tm=>{
-      offices.forEach(of=>{
-        const canal = canais[Math.floor(Math.random()*canais.length)];
-        const den   = Math.floor(Math.random()*300)+50;
-        const pct   = 0.10 + Math.random()*0.35;
-        const num   = Math.floor(den*pct);
-        sample.push({
-          DATE_ID:dt, CX_TEAM_NAME:tm, USER_OFFICE:of, CANAL:canal,
-          CS_MANAGER:managers[Math.floor(Math.random()*managers.length)],
-          CS_SR_MANAGER:srmgrs[Math.floor(Math.random()*srmgrs.length)],
-          USER_AGE_SUBGROUP_NAME:seniorities[Math.floor(Math.random()*seniorities.length)],
-          NUMERATOR:num, DENOMINATOR:den,
-          PROCESS_NAME_LIST:[procs[Math.floor(Math.random()*procs.length)],procs[Math.floor(Math.random()*procs.length)]],
-          CDU_LIST:[cdus[Math.floor(Math.random()*cdus.length)]],
-          SUB_CDU_LIST:[subcdus[Math.floor(Math.random()*subcdus.length)]],
-          SOLUTION_NAME_LIST:[sols[Math.floor(Math.random()*sols.length)]]
-        });
-      });
-    });
-  });
-  processImport(sample);
-  switchTab('managers');
-}
-
-// ── FORMATTERS ─────────────────────────────────────────────────────────────────
+// ── FORMATTERS ──────────────────────────────────────────────────────────────────
 function fmtNum(n){ return Math.round(n).toLocaleString('pt-BR'); }
 function fmtPct(p){ return (p*100).toFixed(1)+'%'; }
 
-// ── CSS helpers (val classes for table td) ────────────────────────────────────
+// ── CSS helpers (val classes para td) ─────────────────────────────────────────
 const style2=document.createElement('style');
 style2.textContent=`.val-neg{color:#F23D4F;font-weight:700}.val-wrn{color:#FF7733;font-weight:700}.val-pos{color:#00A650;font-weight:700}`;
 document.head.appendChild(style2);
 
-// ── AUTO-LOAD: carrega data_recontato.js se disponível ───────────────────────
+// ── AUTO-LOAD: carrega data_recontato.js se disponível ────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
   if (window.RECONTATO_DATA && window.RECONTATO_DATA.length) {
     processImport(window.RECONTATO_DATA);
-    // mostra data de geração na topbar
     if (window.RECONTATO_GENERATED_AT) {
       const badge = document.getElementById('topbar-period');
       if (badge) badge.title = 'Dados gerados em ' + window.RECONTATO_GENERATED_AT;
