@@ -287,7 +287,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <div class="panel-header">
         <div>
           <div class="panel-title">📈 Evolução Mensal (MoM)</div>
-          <div class="panel-sub">% Outlier por mês — todos os períodos disponíveis</div>
+          <div class="panel-sub" id="mom-evo-sub">% Outlier por mês — todos os períodos disponíveis</div>
         </div>
         <div class="panel-toolbar">
           <select class="sfsel" id="mom-evo-dim" onchange="buildEvoCharts()">
@@ -306,7 +306,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <div class="panel-header">
         <div>
           <div class="panel-title">📅 Evolução Semanal (WoW)</div>
-          <div class="panel-sub">% Outlier por semana — últimas semanas disponíveis</div>
+          <div class="panel-sub" id="wow-evo-sub">% Outlier por semana — últimas semanas disponíveis</div>
         </div>
         <div class="panel-toolbar">
           <select class="sfsel" id="wow-evo-dim" onchange="buildEvoCharts()">
@@ -788,22 +788,52 @@ function render(){
 const EVO_COLORS = ['#3483FA','#F23D4F','#00A650','#FF7733','#8B5CF6','#EC4899','#14B8A6','#F59E0B','#6366F1','#84CC16'];
 
 function buildEvoCharts(){
-  buildOneEvo('MES',  'mom-evo-chart', 'mom-evo-dim',  momEvoChart, c=>{ momEvoChart=c; });
-  buildOneEvo('SEMANA','wow-evo-chart','wow-evo-dim',  wowEvoChart, c=>{ wowEvoChart=c; });
+  const f = getFilters();
+  const mainGran = f.gran;
+  const mainPeriod = f.period; // selected period (or 'ALL')
+
+  // Cross-granularity: when a specific period is selected, the "other" chart
+  // shows data constrained to that period's scope.
+  let momCross = null; // period constraint for MES chart
+  let wowCross = null; // period constraint for SEMANA chart
+
+  if(mainGran === 'MES' && mainPeriod !== 'ALL'){
+    // WoW chart: show only weeks that fall within the selected month
+    wowCross = mainPeriod.substring(0,7); // "YYYY-MM"
+  } else if(mainGran === 'SEMANA' && mainPeriod !== 'ALL'){
+    // MoM chart: show only the month that contains the selected week
+    momCross = mainPeriod.substring(0,7); // "YYYY-MM"
+  }
+
+  // atualiza subtítulos dos gráficos
+  const momSub = document.getElementById('mom-evo-sub');
+  const wowSub = document.getElementById('wow-evo-sub');
+  if(momSub) momSub.textContent = momCross
+    ? `% Outlier por mês — mês da semana ${fmtDateLabel(mainPeriod,'SEMANA')}`
+    : '% Outlier por mês — todos os períodos disponíveis';
+  if(wowSub) wowSub.textContent = wowCross
+    ? `% Outlier por semana — semanas de ${fmtDateLabel(mainPeriod,'MES')}`
+    : '% Outlier por semana — últimas semanas disponíveis';
+
+  buildOneEvo('MES',    'mom-evo-chart', 'mom-evo-dim',  momEvoChart, c=>{ momEvoChart=c; }, momCross);
+  buildOneEvo('SEMANA', 'wow-evo-chart', 'wow-evo-dim',  wowEvoChart, c=>{ wowEvoChart=c; }, wowCross);
 }
 
-function buildOneEvo(gran, canvasId, dimSelId, chartInst, setChart){
+function buildOneEvo(gran, canvasId, dimSelId, chartInst, setChart, crossPeriod=null){
   const canvas = document.getElementById(canvasId);
   if(!canvas) return;
   const dim = document.getElementById(dimSelId)?.value || 'total';
   const f   = getFilters();
 
   // filtra RAW por granularidade + filtros (exceto período)
+  // crossPeriod: quando definido, restringe datas ao mês/semana fornecido
   const rows = RAW.filter(r=>{
     if(r.granularity !== gran) return false;
     if(f.team  !=='ALL' && r.team  !==f.team)  return false;
     if(f.office!=='ALL' && r.office!==f.office) return false;
     if(f.canal !=='ALL' && r.canal !==f.canal)  return false;
+    // cross-granularity: filtro por período do eixo cruzado
+    if(crossPeriod !== null && !r.date.startsWith(crossPeriod)) return false;
     return true;
   });
 
@@ -1040,11 +1070,11 @@ function hmCellClick(rowKey, rowVal, colKey, colVal){
   const selCol = keyToSel[colKey];
   if(selRow){
     const el = document.getElementById(selRow);
-    if(el){ el.value = rowVal; }
+    if(el){ el.value = (el.value === rowVal) ? 'ALL' : rowVal; }
   }
   if(selCol){
     const el = document.getElementById(selCol);
-    if(el){ el.value = colVal; }
+    if(el){ el.value = (el.value === colVal) ? 'ALL' : colVal; }
   }
   render();
 }
