@@ -1275,6 +1275,7 @@ function buildWaterfall(){
   const labels = ['GERAL', ...top12.map(g=>g.key.replace('BR_','').replace(/_/g,' ').substring(0,18)), 'TARGET'];
   const floatData = [];
   const bgColors  = [];
+  const realDeltas = [null]; // índice 0 = GERAL (null)
 
   // Barra cinza inicial: de 0 até overallPct*100
   floatData.push([0, overallPct*100]);
@@ -1284,16 +1285,17 @@ function buildWaterfall(){
   let base = overallPct*100;
   top12.forEach(g=>{
     const delta = g.wDev*100;
+    realDeltas.push(delta); // guarda delta real (com sinal correto)
     if(delta>=0){
       floatData.push([base, base+delta]);
-      bgColors.push('rgba(242,61,79,.82)');
-      base += delta;
+      bgColors.push('rgba(242,61,79,.82)');  // vermelho = aumenta outlier
     } else {
       floatData.push([base+delta, base]);
-      bgColors.push('rgba(0,166,80,.75)');
-      base += delta;
+      bgColors.push('rgba(0,166,80,.75)');   // verde = reduz outlier
     }
+    base += delta;
   });
+  realDeltas.push(null); // TARGET
 
   // Barra azul final: TARGET de 0 até 5%
   floatData.push([0, TARGET*100]);
@@ -1325,20 +1327,21 @@ function buildWaterfall(){
             return d[1]>=d[0]?'top':'bottom';
           },
           formatter:(v,ctx)=>{
-            const d=ctx.dataset.data[ctx.dataIndex];
-            if(!Array.isArray(d)) return '';
             const idx=ctx.dataIndex;
+            const d=ctx.dataset.data[idx];
+            if(!Array.isArray(d)) return '';
             if(idx===0) return fmtPct(d[1]/100);
             if(idx===labels.length-1) return fmtPct(TARGET);
-            const delta=d[1]-d[0];
+            const delta = realDeltas[idx]; // delta real com sinal correto
+            if(delta==null) return '';
             return (delta>=0?'+':'')+delta.toFixed(2)+'pp';
           },
           font:{size:9,weight:'bold'},
           color:ctx=>{
             const idx=ctx.dataIndex;
             if(idx===0||idx===labels.length-1) return '#333';
-            const d=ctx.dataset.data[idx];
-            return Array.isArray(d)&&(d[1]-d[0])>=0 ? '#C0192A' : '#00A650';
+            const delta = realDeltas[idx];
+            return (delta!=null && delta>=0) ? '#C0192A' : '#00A650';
           }
         },
         tooltip:{callbacks:{
