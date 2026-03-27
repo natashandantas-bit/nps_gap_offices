@@ -263,10 +263,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   </div>
   <div class="fg">
     <label>Granularidade</label>
-    <select class="fsel" id="f-gran" onchange="render()">
-      <option value="ALL">Todas</option>
+    <select class="fsel" id="f-gran" onchange="onGranChange()">
       <option value="MES">Mês</option>
       <option value="SEMANA">Semana</option>
+    </select>
+  </div>
+  <div class="fg">
+    <label>Período</label>
+    <select class="fsel" id="f-period" onchange="render()">
+      <option value="ALL">Todos</option>
     </select>
   </div>
 </div>
@@ -615,18 +620,49 @@ function getFilters(){
     office:    document.getElementById('f-office').value,
     canal:     document.getElementById('f-canal').value,
     srmanager: document.getElementById('f-srmanager').value,
-    gran:      document.getElementById('f-gran').value
+    gran:      document.getElementById('f-gran').value,
+    period:    document.getElementById('f-period').value
   };
+}
+
+function onGranChange(){
+  populatePeriods();
+  render();
+}
+
+function populatePeriods(){
+  const gran = document.getElementById('f-gran').value;
+  const dates = [...new Set(RAW.filter(r=>r.granularity===gran).map(r=>r.date))].sort().reverse();
+  const sel = document.getElementById('f-period');
+  const cur = sel.value;
+  sel.innerHTML = '';
+  dates.forEach((d,i)=>{
+    const opt = document.createElement('option');
+    opt.value = d;
+    opt.textContent = fmtDateLabel(d, gran);
+    if(i===0) opt.selected = true; // mais recente por padrão
+    sel.appendChild(opt);
+  });
+  // restaura seleção anterior se ainda existir
+  if(dates.includes(cur)) sel.value = cur;
+}
+
+function fmtDateLabel(d, gran){
+  if(!d || d==='????-??') return d;
+  const [y,m] = d.split('-');
+  if(gran==='MES') return (MONTH_LABELS[m]||m)+'/'+y;
+  return 'Sem '+d; // para semana: "Sem 2025-W12" etc
 }
 
 function applyFilters(){
   const f = getFilters();
   DATA = RAW.filter(r=>{
+    if(r.granularity !== f.gran)                            return false;
+    if(f.period !=='ALL' && r.date !== f.period)            return false;
     if(f.team      !=='ALL' && r.team      !== f.team)      return false;
     if(f.office    !=='ALL' && r.office    !== f.office)    return false;
     if(f.canal     !=='ALL' && r.canal     !== f.canal)     return false;
     if(f.srmanager !=='ALL' && r.srmanager !== f.srmanager) return false;
-    if(f.gran      !=='ALL' && r.granularity !== f.gran)    return false;
     return true;
   });
 }
@@ -662,6 +698,7 @@ function populateFilterOptions(){
   fillSel('f-office',    offices,    'Todos');
   fillSel('f-canal',     canais,     'Todos');
   fillSel('f-srmanager', srmanagers, 'Todos');
+  populatePeriods(); // popula períodos com o mais recente selecionado
 }
 
 function fillSel(id, opts, allLabel){
@@ -710,11 +747,9 @@ function render(){
 }
 
 function updateTopbar(){
-  const dates = [...new Set(RAW.map(r=>r.date))].sort();
-  if(dates.length){
-    const [y,m] = dates[dates.length-1].split('-');
-    document.getElementById('topbar-period').textContent = (MONTH_LABELS[m]||m)+'/'+y;
-  }
+  const period = document.getElementById('f-period').value;
+  const gran   = document.getElementById('f-gran').value;
+  document.getElementById('topbar-period').textContent = period && period!=='ALL' ? fmtDateLabel(period, gran) : '—';
 }
 
 // ── KPIs (ajuste #1: delta comparativo correto por granularidade) ──────────────
@@ -723,57 +758,32 @@ function buildKPIs(){
   const totalDen = DATA.reduce((s,r)=>s+r.den,0);
   const pct = totalDen>0 ? totalNum/totalDen : 0;
 
-  const gran = document.getElementById('f-gran').value;
-
+  const gran      = document.getElementById('f-gran').value;
+  const curPeriod = document.getElementById('f-period').value;
+  // períodos disponíveis para essa granularidade (ordenados asc)
+  const allPeriods = [...new Set(RAW.filter(r=>r.granularity===gran).map(r=>r.date))].sort();
+  const curIdx     = allPeriods.indexOf(curPeriod);
   let deltaHtml = '<span class="delta-neu">sem dado anterior</span>';
-
-  if(gran === 'SEMANA'){
-    // filtra RAW por granularity=SEMANA, pega penúltimo date distinto
-    const semRows = RAW.filter(r=>r.granularity==='SEMANA');
-    const semDates = [...new Set(semRows.map(r=>r.date))].sort();
-    if(semDates.length>=2){
-      const prevDate = semDates[semDates.length-2];
-      const f = getFilters();
-      const prevRows = RAW.filter(r=>{
-        if(r.granularity!=='SEMANA') return false;
-        if(r.date!==prevDate) return false;
-        if(f.team!=='ALL'      && r.team!==f.team)           return false;
-        if(f.office!=='ALL'    && r.office!==f.office)        return false;
-        if(f.canal!=='ALL'     && r.canal!==f.canal)          return false;
-        if(f.srmanager!=='ALL' && r.srmanager!==f.srmanager)  return false;
-        return true;
-      });
-      const pn = prevRows.reduce((s,r)=>s+r.num,0);
-      const pd = prevRows.reduce((s,r)=>s+r.den,0);
-      const prevPct = pd>0 ? pn/pd : 0;
-      const delta = pct - prevPct;
-      const sign = delta>0?'▲':'▼';
-      const cls  = delta>0?'delta-up':'delta-down';
-      deltaHtml = `<span class="${cls}">${sign} ${delta>0?'+':''}${(delta*100).toFixed(1)}pp vs período anterior</span>`;
-    }
-  } else {
-    // MES ou ALL: compara com mês anterior (penúltimo date distinto em RAW)
-    const allDates = [...new Set(RAW.map(r=>r.date))].sort();
-    if(allDates.length>=2){
-      const prevDate = allDates[allDates.length-2];
-      const f = getFilters();
-      const prevRows = RAW.filter(r=>{
-        if(r.date!==prevDate) return false;
-        if(gran!=='ALL' && r.granularity!==gran) return false;
-        if(f.team!=='ALL'      && r.team!==f.team)           return false;
-        if(f.office!=='ALL'    && r.office!==f.office)        return false;
-        if(f.canal!=='ALL'     && r.canal!==f.canal)          return false;
-        if(f.srmanager!=='ALL' && r.srmanager!==f.srmanager)  return false;
-        return true;
-      });
-      const pn = prevRows.reduce((s,r)=>s+r.num,0);
-      const pd = prevRows.reduce((s,r)=>s+r.den,0);
-      const prevPct = pd>0 ? pn/pd : 0;
-      const delta = pct - prevPct;
-      const sign = delta>0?'▲':'▼';
-      const cls  = delta>0?'delta-up':'delta-down';
-      deltaHtml = `<span class="${cls}">${sign} ${delta>0?'+':''}${(delta*100).toFixed(1)}pp vs período anterior</span>`;
-    }
+  if(curIdx > 0){
+    const prevDate = allPeriods[curIdx - 1];
+    const f = getFilters();
+    const prevRows = RAW.filter(r=>{
+      if(r.granularity!==gran) return false;
+      if(r.date!==prevDate)    return false;
+      if(f.team!=='ALL'      && r.team!==f.team)          return false;
+      if(f.office!=='ALL'    && r.office!==f.office)       return false;
+      if(f.canal!=='ALL'     && r.canal!==f.canal)         return false;
+      if(f.srmanager!=='ALL' && r.srmanager!==f.srmanager) return false;
+      return true;
+    });
+    const pn = prevRows.reduce((s,r)=>s+r.num,0);
+    const pd = prevRows.reduce((s,r)=>s+r.den,0);
+    const prevPct = pd>0 ? pn/pd : 0;
+    const delta   = pct - prevPct;
+    const sign = delta>0?'▲':'▼';
+    const cls  = delta>0?'delta-up':'delta-down';
+    const prevLbl = fmtDateLabel(prevDate, gran);
+    deltaHtml = `<span class="${cls}">${sign} ${delta>0?'+':''}${(delta*100).toFixed(1)}pp vs ${prevLbl}</span>`;
   }
 
   // teams above TARGET
