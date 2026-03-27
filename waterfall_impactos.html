@@ -337,6 +337,10 @@ tr:hover td{background:#FAFAFA}
         </div>
         <div class="drill-canvas-wrap" id="drill-canvas-4"></div>
       </div>
+      <div class="drill-card">
+        <div class="drill-card-hdr"><span class="drill-card-num">5</span><span class="drill-card-dim">Por Equipe</span></div>
+        <div class="drill-canvas-wrap" id="drill-canvas-5"></div>
+      </div>
     </div>
 
     <!-- 4 waterfalls MoM -->
@@ -358,6 +362,10 @@ tr:hover td{background:#FAFAFA}
         <div class="drill-card-hdr"><span class="drill-card-num">4</span><span class="drill-card-dim">Por CDU</span></div>
         <div class="drill-canvas-wrap" id="mom-canvas-4"></div>
       </div>
+      <div class="drill-card">
+        <div class="drill-card-hdr"><span class="drill-card-num">5</span><span class="drill-card-dim">Por Equipe</span></div>
+        <div class="drill-canvas-wrap" id="mom-canvas-5"></div>
+      </div>
     </div>
 
     <!-- 4 waterfalls vs Target -->
@@ -378,6 +386,10 @@ tr:hover td{background:#FAFAFA}
       <div class="drill-card">
         <div class="drill-card-hdr"><span class="drill-card-num">4</span><span class="drill-card-dim">Por CDU</span></div>
         <div class="drill-canvas-wrap" id="tgt-canvas-4"></div>
+      </div>
+      <div class="drill-card">
+        <div class="drill-card-hdr"><span class="drill-card-num">5</span><span class="drill-card-dim">Por Equipe</span></div>
+        <div class="drill-canvas-wrap" id="tgt-canvas-5"></div>
       </div>
     </div>
 
@@ -435,9 +447,9 @@ Chart.defaults.set('plugins.datalabels', { display: false });
 const F    = { tipo:'SEMANA', period:null, team:'ALL', canal:'ALL', office:'ALL' };
 const WF   = { sort:'opp' };
 const DRILL= { office:null, canal:null, processo:null, cdu:null };
-let drillCharts = [null, null, null, null];
-let tgtCharts   = [null, null, null, null];
-let momCharts   = [null, null, null, null];
+let drillCharts = [null, null, null, null, null];
+let tgtCharts   = [null, null, null, null, null];
+let momCharts   = [null, null, null, null, null];
 let wfChartInst = null; // compat
 let activeTab   = 'office';
 
@@ -886,6 +898,11 @@ function buildDrillAll() {
   }
   buildDrillWaterfall(4,'cdu',r4,r4Prev,DRILL.cdu);
 
+  // Chart 5: Equipe — sem filtro de time para mostrar todas
+  const r5=filterRows(window.NPS_DATA||[],{office:DRILL.office||'ALL',canal:DRILL.canal||'ALL'});
+  const r5Prev=filterRows(window.NPS_DATA||[],{office:DRILL.office||'ALL',canal:DRILL.canal||'ALL',period:prevPeriod});
+  buildDrillWaterfall(5,'team',r5,r5Prev,null);
+
   // MoM charts (mês vs mês anterior)
   const momPeriods=latestPeriods(window.NPS_DATA||[],'MES');
   const momCurr=momPeriods[0]||null;
@@ -906,11 +923,16 @@ function buildDrillAll() {
   const rm4Prev=filterRows(window.NPS_CDU_DATA||[],{team,tipo:'MES',period:momPrev,office:DRILL.office||'ALL',canal:DRILL.canal||'ALL'});
   buildDrillWaterfall(4,'cdu',rm4,rm4Prev,null,'mom-canvas-',momCharts);
 
+  const rm5=filterRows(window.NPS_DATA||[],{tipo:'MES',period:momCurr,office:DRILL.office||'ALL',canal:DRILL.canal||'ALL'});
+  const rm5Prev=filterRows(window.NPS_DATA||[],{tipo:'MES',period:momPrev,office:DRILL.office||'ALL',canal:DRILL.canal||'ALL'});
+  buildDrillWaterfall(5,'team',rm5,rm5Prev,null,'mom-canvas-',momCharts);
+
   // TGT charts (vs Target)
   buildTgtWaterfall(1,'office',r1);
   buildTgtWaterfall(2,'ch',r2);
   buildTgtWaterfall(3,'processo',r3);
   buildTgtWaterfall(4,'cdu',r4);
+  buildTgtWaterfall(5,'team',r5);
 
   buildSimulation();
 }
