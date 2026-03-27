@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Waterfall por NPS Driver</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<script src="data.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#EBEBEB;color:#333;font-size:13px}
+
+.topbar{background:#FFE600;height:48px;display:flex;align-items:center;padding:0 24px;gap:16px;position:sticky;top:0;z-index:200;box-shadow:0 2px 6px rgba(0,0,0,.15)}
+.topbar-logo{font-size:17px;font-weight:800;color:#333;letter-spacing:-.5px}
+.topbar-sep{width:1px;height:22px;background:rgba(0,0,0,.15)}
+.topbar-title{font-size:12px;font-weight:700;color:#555}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.topbar-period{font-size:11px;background:rgba(0,0,0,.1);padding:3px 10px;border-radius:20px;color:#444;font-weight:600}
+.topbar-link{font-size:10px;color:#555;font-weight:600;text-decoration:none;padding:3px 8px;background:rgba(0,0,0,.08);border-radius:4px}
+
+.filter-bar{background:#fff;border-bottom:2px solid #FFE600;padding:10px 24px;display:flex;gap:14px;flex-wrap:wrap;align-items:center;position:sticky;top:48px;z-index:199;box-shadow:0 2px 6px rgba(0,0,0,.08)}
+.fg{display:flex;align-items:center;gap:6px}
+.fg label{font-size:10px;font-weight:700;color:#777;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap}
+.fsel{padding:5px 10px;border:1.5px solid #E0E0E0;border-radius:6px;font-size:11px;color:#333;background:#fff;cursor:pointer;outline:none;font-weight:600}
+.fsel:focus{border-color:#3483FA}
+
+.page{max-width:1100px;margin:0 auto;padding:20px 16px}
+
+.summary-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}
+.scard{background:#fff;border-radius:10px;padding:14px 18px;border-left:4px solid #ccc;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.scard-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#999;margin-bottom:6px}
+.scard-val{font-size:30px;font-weight:800;line-height:1}
+.scard-sub{font-size:10px;color:#aaa;margin-top:4px}
+.scard.nps{border-left-color:#3483FA}.scard.nps .scard-val{color:#3483FA}
+.scard.tgt{border-left-color:#9CA3AF}.scard.tgt .scard-val{color:#6B7280}
+.scard.gap-pos{border-left-color:#00A650}.scard.gap-pos .scard-val{color:#00A650}
+.scard.gap-neg{border-left-color:#F23D4F}.scard.gap-neg .scard-val{color:#F23D4F}
+.scard.gap-warn{border-left-color:#FF7733}.scard.gap-warn .scard-val{color:#FF7733}
+.scard.vol{border-left-color:#8B5CF6}.scard.vol .scard-val{color:#8B5CF6}
+
+.wf-panel{background:#fff;border-radius:10px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:hidden}
+.wf-top{padding:18px 22px 0}
+.wf-header{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px}
+.wf-title{font-size:14px;font-weight:800;color:#222}
+.wf-sub{font-size:11px;color:#888;margin-top:3px}
+.sfsel{padding:4px 9px;border:1.5px solid #E0E0E0;border-radius:6px;font-size:11px;color:#333;background:#fff;cursor:pointer;outline:none;font-weight:600}
+.sfsel:focus{border-color:#3483FA}
+
+.drill-breadcrumb{padding:8px 22px;font-size:11px;color:#888;background:#FAFAFA;border-bottom:1px solid #F0F0F0;display:flex;gap:4px;align-items:center;flex-wrap:wrap}
+.drill-bc-item{color:#aaa}.drill-bc-item.active{color:#222;font-weight:700}
+.drill-bc-arrow{color:#ddd;margin:0 2px;font-size:10px}
+.drill-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:#F0F0F0}
+.drill-card{background:#fff;padding:14px 16px 18px}
+.drill-card-hdr{display:flex;align-items:center;gap:6px;margin-bottom:8px}
+.drill-card-num{width:20px;height:20px;border-radius:50%;background:#222;color:#FFE600;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.drill-card-dim{font-size:11px;font-weight:700;color:#444;flex:1}
+.drill-reset-btn{font-size:10px;font-weight:700;color:#F23D4F;background:none;border:1px solid #F23D4F;border-radius:4px;padding:1px 7px;cursor:pointer;transition:background .1s}
+.drill-reset-btn:hover{background:#F23D4F;color:#fff}
+.drill-canvas-wrap{position:relative;width:100%;height:240px}
+.drill-canvas-wrap canvas{cursor:pointer}
+
+.sim-panel{background:linear-gradient(135deg,#FFFBEB,#FFF);border-top:1px solid #F0F0F0;padding:18px 22px}
+.sim-title{font-size:12px;font-weight:800;color:#B45309;text-transform:uppercase;letter-spacing:.4px;margin-bottom:12px}
+
+.tabs-nav{background:#fff;border-radius:10px 10px 0 0;border-bottom:2px solid #E8E8E8;padding:0 20px;display:flex;overflow-x:auto;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.tab-btn{padding:11px 14px;border:none;background:none;font-size:11px;font-weight:700;color:#888;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;white-space:nowrap;display:flex;align-items:center;gap:5px}
+.tab-btn:hover{color:#3483FA}
+.tab-btn.active{color:#3483FA;border-bottom-color:#3483FA}
+.tab-badge{font-size:9px;background:#F5F5F5;color:#999;padding:1px 5px;border-radius:10px;font-weight:700}
+.tab-btn.active .tab-badge{background:#EBF3FF;color:#3483FA}
+.tab-content{display:none;background:#fff;border-radius:0 0 10px 10px;padding:18px 22px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.tab-content.active{display:block}
+
+.section-title-bar{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:#3483FA;background:#EBF3FF;padding:5px 12px;border-radius:6px;margin-bottom:12px;display:inline-block}
+.section-filters{display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:10px 12px;background:#FAFAFA;border-radius:8px;margin-bottom:12px}
+.sf-lbl{font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.3px;align-self:center}
+
+.dtable-wrap{overflow-x:auto;margin-top:12px}
+table{border-collapse:collapse;width:100%}
+thead tr{background:#FAFAFA}
+th{text-align:left;padding:7px 10px;font-size:10px;font-weight:700;color:#999;border-bottom:2px solid #F0F0F0;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap}
+td{padding:7px 10px;border-bottom:1px solid #F7F7F7;font-size:11px}
+tr:hover td{background:#FAFAFA}
+.tr{text-align:right}
+.val-pos{color:#00A650;font-weight:700}
+.val-neg{color:#F23D4F;font-weight:700}
+.val-wrn{color:#FF7733;font-weight:700}
+.val-neu{color:#888}
+.impact-bar{height:100%;border-radius:4px}
+.bar-neg{background:linear-gradient(90deg,#F23D4F,#FF6B6B)}
+.bar-pos{background:linear-gradient(90deg,#00A650,#34D399)}
+.bar-warn{background:linear-gradient(90deg,#FF7733,#FFAA66)}
+.empty-msg{font-size:12px;color:#aaa;text-align:center;padding:24px;font-style:italic}
+.no-data-banner{background:#FFF9C4;border:1.5px solid #F59E0B;border-radius:8px;padding:14px 18px;margin-bottom:16px;font-size:12px;color:#92400E;line-height:1.6}
+
+@media(max-width:700px){
+  .summary-row{grid-template-columns:1fr 1fr}
+  .drill-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-logo">mercadolibre</div>
+  <div class="topbar-sep"></div>
+  <div class="topbar-title">Waterfall por NPS Driver</div>
+  <div class="topbar-right">
+    <div class="topbar-period" id="topbar-period">—</div>
+    <a class="topbar-link" href="waterfall_impactos.html">← Impactos</a>
+    <a class="topbar-link" href="index.html">← Voltar</a>
+  </div>
+</div>
+
+<div class="filter-bar">
+  <div class="fg">
+    <label>Granularidade</label>
+    <select class="fsel" id="f-tipo" onchange="applyFilters()">
+      <option value="SEMANA">Semana</option>
+      <option value="MES">Mês</option>
+    </select>
+  </div>
+  <div class="fg">
+    <label>Período</label>
+    <select class="fsel" id="f-period" onchange="applyFilters()"></select>
+  </div>
+</div>
+
+<div class="page">
+
+  <div id="no-data-banner" class="no-data-banner" style="display:none">
+    ⚠️ <strong>NPS_DRIVER_DATA não encontrado.</strong> Execute o <code>refresh_nps_data.py</code> para carregar os dados de Driver. O campo <code>DRIVER_TARGET_NPS</code> precisa existir na tabela <code>DM_CX_NPS_Y20_DETAIL</code>.
+  </div>
+
+  <div class="summary-row" id="summary-row"></div>
+
+  <!-- WATERFALL DRILL-DOWN -->
+  <div class="wf-panel">
+    <div class="wf-top">
+      <div class="wf-header">
+        <div>
+          <div class="wf-title">🎯 Drill-down por NPS Driver — Onde está o GAP?</div>
+          <div class="wf-sub">Driver → Processo → Office → Canal. Clique em qualquer barra para filtrar o próximo nível.</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span style="font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.4px">Office</span>
+          <select class="sfsel" id="wf-office" onchange="buildDrillAll()">
+            <option value="ALL">Todos</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="drill-breadcrumb" id="drill-breadcrumb">
+      <span class="drill-bc-item active">Todos os Drivers</span>
+    </div>
+
+    <div class="drill-grid">
+      <div class="drill-card">
+        <div class="drill-card-hdr">
+          <span class="drill-card-num">1</span>
+          <span class="drill-card-dim">Por NPS Driver</span>
+          <button class="drill-reset-btn" id="drill-reset-1" onclick="drillReset(1)" style="display:none">× limpar</button>
+        </div>
+        <div class="drill-canvas-wrap" id="drill-canvas-1"></div>
+      </div>
+      <div class="drill-card">
+        <div class="drill-card-hdr">
+          <span class="drill-card-num">2</span>
+          <span class="drill-card-dim" id="drill-dim-label-2">Por Equipe</span>
+          <button class="drill-reset-btn" id="drill-reset-2" onclick="drillReset(2)" style="display:none">× limpar</button>
+        </div>
+        <div class="drill-canvas-wrap" id="drill-canvas-2"></div>
+      </div>
+      <div class="drill-card">
+        <div class="drill-card-hdr">
+          <span class="drill-card-num">3</span>
+          <span class="drill-card-dim">Por Office</span>
+          <button class="drill-reset-btn" id="drill-reset-3" onclick="drillReset(3)" style="display:none">× limpar</button>
+        </div>
+        <div class="drill-canvas-wrap" id="drill-canvas-3"></div>
+      </div>
+      <div class="drill-card">
+        <div class="drill-card-hdr">
+          <span class="drill-card-num">4</span>
+          <span class="drill-card-dim">Por Canal</span>
+          <button class="drill-reset-btn" id="drill-reset-4" onclick="drillReset(4)" style="display:none">× limpar</button>
+        </div>
+        <div class="drill-canvas-wrap" id="drill-canvas-4"></div>
+      </div>
+    </div>
+
+    <!-- SIMULAÇÃO -->
+    <div class="sim-panel">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+        <div class="sim-title" style="margin-bottom:0">🎯 Simulação de Ganho — Se resolvermos os top problemas</div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span style="font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.3px">Modo</span>
+          <select class="sfsel" id="sim-mode" onchange="buildSimulation()">
+            <option value="fix">Se resolvermos ↑</option>
+            <option value="remove">E se removêssemos? ✂️</option>
+          </select>
+          <span style="font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.3px">Dimensão</span>
+          <select class="sfsel" id="sim-dim" onchange="buildSimulation()">
+            <option value="driver">NPS Driver</option>
+            <option value="equipe">Equipe</option>
+            <option value="office">Office</option>
+          </select>
+        </div>
+      </div>
+      <div id="sim-table-wrap"></div>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs-nav">
+    <button class="tab-btn active" onclick="switchTab('driver')" id="tab-btn-driver">🎯 Por NPS Driver <span class="tab-badge" id="tbadge-driver">—</span></button>
+    <button class="tab-btn" onclick="switchTab('processo')" id="tab-btn-processo">⚙️ Por Processo <span class="tab-badge" id="tbadge-processo">—</span></button>
+    <button class="tab-btn" onclick="switchTab('office')" id="tab-btn-office">🏢 Por Office <span class="tab-badge" id="tbadge-office">—</span></button>
+    <button class="tab-btn" onclick="switchTab('canal')" id="tab-btn-canal">📡 Por Canal <span class="tab-badge" id="tbadge-canal">—</span></button>
+  </div>
+
+  <div class="tab-content active" id="tab-driver"></div>
+  <div class="tab-content" id="tab-processo"></div>
+  <div class="tab-content" id="tab-office"></div>
+  <div class="tab-content" id="tab-canal"></div>
+
+</div>
+
+<script>
+Chart.register(ChartDataLabels);
+Chart.defaults.set('plugins.datalabels', { display: false });
+
+// ── ESTADO ─────────────────────────────────────────────────────────────────
+const F    = { tipo:'SEMANA', period:null };
+const DRILL = { driver:null, equipe:null, office:null, canal:null };
+let drillCharts = [null,null,null,null];
+let activeTab   = 'driver';
+
+const CH_LABEL = { 'MULTICANAL C2C':'C2C', 'MULTICANAL CHAT':'Chat', 'OFFLINE':'Offline' };
+
+// ── BUYERS DRIVERS — lista fixa dos 11 drivers da aba Buyers ─────────────────
+const BUYERS_DRIVERS = new Set([
+  'ME Comprador',
+  'Mediaciones Comprador',
+  'ML Comprador',
+  'MP Comprador',
+  'PCF Comprador: Durante la entrega',
+  'PCF Comprador: Posterior a la entrega',
+  'PDD DS&XD - Comprador',
+  'PDD FBM - Comprador',
+  'PDD MP,FLEX & CBT - Comprador',
+  'PNR ME - Comprador',
+  'PNR MP - Comprador',
+]);
+
+// ── BASELINE FIXO POR DRIVER (Buyers) ────────────────────────────────────────
+// Pesos fixos (%) para cálculo de contribuição — nunca mudam com filtros
+const DRIVER_BASELINE = {
+  'ME Comprador':                        28.84,
+  'Mediaciones Comprador':                0.27,
+  'ML Comprador':                         6.98,
+  'MP Comprador':                         5.40,
+  'PCF Comprador: Durante la entrega':    1.03,
+  'PCF Comprador: Posterior a la entrega':20.32,
+  'PDD DS&XD - Comprador':               13.22,
+  'PDD FBM - Comprador':                 13.79,
+  'PDD MP,FLEX & CBT - Comprador':        3.74,
+  'PNR ME - Comprador':                   3.43,
+  'PNR MP - Comprador':                   2.97,
+};
+
+// Retorna peso (0–1) para um driver. Null se não estiver no baseline.
+function driverBaselineWeight(name) {
+  const v = DRIVER_BASELINE[name];
+  return v !== undefined ? v / 100 : null;
+}
+
+// ── HELPERS ────────────────────────────────────────────────────────────────
+function filterRows(data, ov={}) {
+  const tipo   = ov.tipo   !== undefined ? ov.tipo   : F.tipo;
+  const period = ov.period !== undefined ? ov.period : F.period;
+  const office = ov.office !== undefined ? ov.office : (document.getElementById('wf-office')?.value||'ALL');
+  const canal  = ov.canal  !== undefined ? ov.canal  : 'ALL';
+  const driver = ov.driver !== undefined ? ov.driver : null;
+  const equipe = ov.equipe !== undefined ? ov.equipe : null;
+
+  return data.filter(r => {
+    if (tipo   && r.tipo   !== tipo)                                        return false;
+    if (period && r.period !== period)                                      return false;
+    if (office !== 'ALL' && r.office !== undefined && r.office !== office)  return false;
+    if (canal  !== 'ALL' && r.ch     !== canal)                             return false;
+    if (driver  && r.driver !== driver)                                     return false;
+    if (equipe  && r.team   !== equipe)                                     return false;
+    return true;
+  });
+}
+
+function aggregateBy(rows, dimKeyOrFn, weightFn) {
+  const groups = {};
+  const totalEnc = rows.reduce((s,r)=>s+(r.enc||0),0);
+  const getKey = typeof dimKeyOrFn==='function' ? dimKeyOrFn : r => r[dimKeyOrFn];
+  rows.forEach(r => {
+    const k = getKey(r) || '(sem dado)';
+    if (!groups[k]) groups[k]={key:k,enc:0,npsW:0,tgtW:0,det:0};
+    groups[k].enc  += r.enc||0;
+    groups[k].npsW += (r.nps||0)*(r.enc||0);
+    groups[k].tgtW += (r.target||0)*(r.enc||0);
+    groups[k].det  += r.det||0;
+  });
+  return Object.values(groups).filter(g=>g.enc>0).map(g=>{
+    const nps=g.npsW/g.enc, target=g.tgtW/g.enc, gap=nps-target;
+    const volWeight=g.enc/(totalEnc||1);
+    const weight = weightFn ? (weightFn(g.key) ?? volWeight) : volWeight;
+    return {key:g.key,enc:g.enc,nps,target,gap,det:g.det,
+            weight,contribution:gap*weight, opp:g.enc*Math.max(0,-gap)};
+  });
+}
+
+function weightedSummary(rows) {
+  const enc=rows.reduce((s,r)=>s+(r.enc||0),0);
+  if (!enc) return null;
+  return {
+    nps   :rows.reduce((s,r)=>s+(r.nps   ||0)*r.enc,0)/enc,
+    target:rows.reduce((s,r)=>s+(r.target||0)*r.enc,0)/enc,
+    get gap() { return this.nps - this.target; },
+    enc, det:rows.reduce((s,r)=>s+(r.det||0),0)
+  };
+}
+
+function latestPeriods(data,tipo){
+  return [...new Set(data.filter(r=>r.tipo===tipo).map(r=>r.period))].sort().reverse();
+}
+
+function fmtNPS(v)  { return v!=null?v.toFixed(1):'—'; }
+function fmtGap(v)  { return v!=null?(v>0?'+':'')+v.toFixed(1):'—'; }
+function fmtEnc(v)  { return v!=null?v.toLocaleString('pt-BR'):'—'; }
+function gapCls(v)  { return v==null?'val-neu':v>=0?'val-pos':v>=-3?'val-wrn':'val-neg'; }
+function barCls(v)  { return v==null?'':v>=0?'bar-pos':v>=-3?'bar-warn':'bar-neg'; }
+function fmtPeriod(p){ if(!p)return'—'; const d=new Date(p+'T00:00:00'); return d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit'}); }
+
+function getData() {
+  return (window.NPS_DRIVER_DATA||[]).filter(r => BUYERS_DRIVERS.has(r.driver));
+}
+
+// ── INIT ────────────────────────────────────────────────────────────────────
+function populateFilters() {
+  const data = getData();
+  if(!data.length){
+    document.getElementById('no-data-banner').style.display='';
+  }
+
+  const periods = latestPeriods(data.length ? data : (window.NPS_PROCESS_DATA||[]), 'SEMANA');
+  const sel = document.getElementById('f-period');
+  sel.innerHTML='';
+  periods.slice(0,8).forEach((p,i)=>{
+    const o=document.createElement('option');
+    o.value=p; o.text=fmtPeriod(p)+(i===0?' (última)':'');
+    if(i===0) o.selected=true;
+    sel.appendChild(o);
+  });
+  F.period=periods[0]||null;
+
+  // Populate office filter
+  const offices=[...new Set(data.map(r=>r.office).filter(Boolean))].sort();
+  const offSel=document.getElementById('wf-office');
+  offices.forEach(o=>{
+    const opt=document.createElement('option');
+    opt.value=o; opt.text=o;
+    offSel.appendChild(opt);
+  });
+}
+
+function applyFilters() {
+  F.tipo   = document.getElementById('f-tipo').value;
+  F.period = document.getElementById('f-period').value;
+
+  const data = getData().length ? getData() : (window.NPS_PROCESS_DATA||[]);
+  const periods=latestPeriods(data,F.tipo);
+  const sel=document.getElementById('f-period');
+  const cur=F.period; sel.innerHTML='';
+  periods.slice(0,8).forEach((p,i)=>{
+    const o=document.createElement('option'); o.value=p;
+    o.text=fmtPeriod(p)+(i===0?' (última)':''); sel.appendChild(o);
+  });
+  F.period=periods.includes(cur)?cur:(periods[0]||null);
+  if(periods.includes(cur)) sel.value=cur;
+
+  buildReport();
+}
+
+function buildReport() {
+  buildSummary();
+  buildDrillAll();
+  switchTab(activeTab, true);
+}
+
+// ── TABS ────────────────────────────────────────────────────────────────────
+function switchTab(tab, force=false) {
+  if(activeTab===tab && !force) return;
+  activeTab=tab;
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+  document.getElementById('tab-btn-'+tab).classList.add('active');
+  document.getElementById('tab-'+tab).classList.add('active');
+  if(tab==='driver')   buildTabDriver();
+  if(tab==='processo') buildTabProcesso();
+  if(tab==='office')   buildTabOffice();
+  if(tab==='canal')    buildTabCanal();
+}
+
+// ── SUMMARY ─────────────────────────────────────────────────────────────────
+function buildSummary() {
+  const rows=filterRows(getData());
+  const s=weightedSummary(rows);
+  document.getElementById('topbar-period').textContent=
+    (F.tipo==='SEMANA'?'Semana de ':'Mês de ')+(F.period?fmtPeriod(F.period):'—');
+  if(!s){document.getElementById('summary-row').innerHTML='<div class="empty-msg" style="grid-column:1/-1">Sem dados — execute refresh_nps_data.py para carregar NPS_DRIVER_DATA.</div>';return;}
+  const gc=s.gap>=0?'gap-pos':s.gap>=-3?'gap-warn':'gap-neg';
+  document.getElementById('summary-row').innerHTML=`
+    <div class="scard nps"><div class="scard-lbl">NPS Realizado</div>
+      <div class="scard-val">${fmtNPS(s.nps)}</div>
+      <div class="scard-sub">${F.tipo==='SEMANA'?'Semana':'Mês'} ${fmtPeriod(F.period)}</div></div>
+    <div class="scard tgt"><div class="scard-lbl">Meta (Target)</div>
+      <div class="scard-val">${fmtNPS(s.target)}</div>
+      <div class="scard-sub">ponderado por volume</div></div>
+    <div class="scard ${gc}"><div class="scard-lbl">GAP vs Meta</div>
+      <div class="scard-val">${fmtGap(s.gap)} pp</div>
+      <div class="scard-sub">${s.gap>=0?'✅ Acima da meta':'⚠️ Abaixo da meta'}</div></div>
+    <div class="scard vol"><div class="scard-lbl">Volume</div>
+      <div class="scard-val">${fmtEnc(s.enc)}</div>
+      <div class="scard-sub">${s.det>0?fmtEnc(s.det)+' detratores':''}</div></div>`;
+}
+
+// ── DRILL-DOWN WATERFALL ─────────────────────────────────────────────────────
+function buildDrillWaterfall(level, dimKeyOrFn, rows, selectedKey, labelFn, weightFn) {
+  const wrap=document.getElementById('drill-canvas-'+level);
+  let segs=aggregateBy(rows, dimKeyOrFn, weightFn).filter(s=>s.enc>=5);
+  segs.sort((a,b)=>a.contribution-b.contribution);
+
+  if(!segs.length){
+    wrap.innerHTML='<div class="empty-msg" style="padding:20px 0;font-size:11px;color:#aaa;text-align:center">Sem dados</div>';
+    return;
+  }
+
+  const MAX_EACH=4;
+  if(segs.length > MAX_EACH*2) {
+    const worst=segs.slice(0,MAX_EACH);
+    const best =segs.slice(segs.length-MAX_EACH);
+    const mid  =segs.slice(MAX_EACH, segs.length-MAX_EACH);
+    const othEnc=mid.reduce((s,x)=>s+x.enc,0);
+    segs=[...worst,{
+      key:`Outros (${mid.length})`,enc:othEnc,isOther:true,
+      nps:othEnc?mid.reduce((s,x)=>s+x.nps*x.enc,0)/othEnc:0,
+      target:othEnc?mid.reduce((s,x)=>s+x.target*x.enc,0)/othEnc:0,
+      gap:othEnc?mid.reduce((s,x)=>s+x.gap*x.enc,0)/othEnc:0,
+      contribution:mid.reduce((s,x)=>s+x.contribution,0),
+      det:mid.reduce((s,x)=>s+(x.det||0),0),
+      opp:mid.reduce((s,x)=>s+x.opp,0),
+      weight:mid.reduce((s,x)=>s+x.weight,0),
+    },...best];
+  }
+
+  const summary=weightedSummary(rows)||{nps:0,target:0};
+  const target  =parseFloat(summary.target.toFixed(2));
+  const npsAtual=parseFloat(summary.nps.toFixed(2));
+  const floor=Math.max(0, Math.floor((Math.min(target,npsAtual)-8)/5)*5);
+  const ceil =Math.ceil( (Math.max(target,npsAtual)+4)/5)*5;
+
+  const labels=['Target'], barsData=[[floor,target]];
+  const colors=['rgba(150,150,150,0.85)'];
+  const dlLabels=[target.toFixed(1)+'%'], dlColors=['#555'];
+  let running=target;
+
+  segs.forEach(s=>{
+    const isSelected=selectedKey&&s.key===selectedKey;
+    const isNeg=s.contribution<0, isOther=!!s.isOther;
+    const alpha=selectedKey&&!isSelected?0.25:0.85;
+    const rawLabel=labelFn?labelFn(s.key):s.key;
+    labels.push(rawLabel.length>16?rawLabel.slice(0,14)+'…':rawLabel);
+    const start=running;
+    running=parseFloat((running+s.contribution).toFixed(2));
+    const lo=Math.min(start,running), hi=Math.max(start,running);
+    barsData.push([parseFloat(lo.toFixed(2)),parseFloat(hi.toFixed(2))]);
+    colors.push(isSelected?'rgba(255,193,7,0.95)':isOther?`rgba(180,180,180,${alpha})`:isNeg?`rgba(242,61,79,${alpha})`:`rgba(0,166,80,${alpha})`);
+    dlLabels.push((s.contribution>=0?'+':'')+s.contribution.toFixed(1)+' pp');
+    dlColors.push(isOther?'#888':isNeg?'#c0392b':'#1a7a3b');
+  });
+
+  labels.push('NPS Atual');
+  barsData.push([floor,npsAtual]);
+  colors.push('rgba(26,115,232,0.85)');
+  dlLabels.push(npsAtual.toFixed(1)+'%');
+  dlColors.push('#1557a0');
+
+  wrap.innerHTML='<canvas id="drill-chart-'+level+'"></canvas>';
+  if(drillCharts[level-1]){try{drillCharts[level-1].destroy();}catch(e){}}
+  const ctx=document.getElementById('drill-chart-'+level).getContext('2d');
+  const _segs=segs;
+  drillCharts[level-1]=new Chart(ctx,{
+    type:'bar',
+    data:{labels,datasets:[{data:barsData,backgroundColor:colors,borderWidth:0,borderRadius:3,borderSkipped:false}]},
+    options:{
+      responsive:true,maintainAspectRatio:false,layout:{padding:{top:22}},
+      onClick:(evt,elements)=>{
+        if(!elements.length)return;
+        const idx=elements[0].index;
+        if(idx===0||idx===labels.length-1)return;
+        const clicked=_segs[idx-1];
+        if(clicked&&!clicked.isOther) drillSelect(level,clicked.key);
+      },
+      plugins:{
+        legend:{display:false},
+        datalabels:{display:true,formatter:(_,c)=>dlLabels[c.dataIndex],color:c=>dlColors[c.dataIndex],font:{weight:700,size:9},anchor:'end',align:'end',offset:1,clamp:false},
+        tooltip:{callbacks:{label:c=>{
+          const i=c.dataIndex;
+          if(i===0) return ` Meta: ${target.toFixed(1)}%`;
+          if(i===labels.length-1) return ` NPS Atual: ${npsAtual.toFixed(1)}%`;
+          const s=_segs[i-1];
+          return [` Contribuição: ${(s.contribution>=0?'+':'')+s.contribution.toFixed(2)} pp`,
+                  ` NPS: ${s.nps.toFixed(1)}% | Meta: ${s.target.toFixed(1)}%`,
+                  ` Volume: ${fmtEnc(s.enc)} enc`];
+        }}}
+      },
+      scales:{
+        x:{grid:{display:false},ticks:{font:{size:9},color:'#444',maxRotation:40,autoSkip:false}},
+        y:{min:floor,max:ceil,grid:{color:'rgba(0,0,0,0.05)'},ticks:{font:{size:9},color:'#999',callback:v=>v.toFixed(0)+'%'}}
+      }
+    }
+  });
+}
+
+function buildDrillAll() {
+  const data=getData();
+  const parts=[{label:'Todos',active:false}];
+  if(DRILL.driver) parts.push({label:DRILL.driver.length>24?DRILL.driver.slice(0,22)+'…':DRILL.driver,active:false});
+  if(DRILL.equipe) parts.push({label:DRILL.equipe.length>24?DRILL.equipe.slice(0,22)+'…':DRILL.equipe,active:false});
+  if(DRILL.office) parts.push({label:DRILL.office,active:false});
+  if(DRILL.canal)  parts.push({label:CH_LABEL[DRILL.canal]||DRILL.canal,active:false});
+  parts[parts.length-1].active=true;
+  document.getElementById('drill-breadcrumb').innerHTML=
+    parts.map(p=>`<span class="drill-bc-item${p.active?' active':''}">${p.label}</span>`).join('<span class="drill-bc-arrow">›</span>');
+
+  [DRILL.driver,DRILL.equipe,DRILL.office,DRILL.canal].forEach((v,i)=>{
+    const btn=document.getElementById('drill-reset-'+(i+1));
+    if(btn) btn.style.display=v?'':'none';
+  });
+
+  // 1. Por Driver — peso fixo do baseline
+  buildDrillWaterfall(1, 'driver', filterRows(data,{driver:null,equipe:null}), DRILL.driver, null, driverBaselineWeight);
+
+  // 2. Por Equipe (CX_TEAM_NAME) — filtrado por driver
+  const r2=filterRows(data,{driver:DRILL.driver||null,equipe:null});
+  const lbl2=document.getElementById('drill-dim-label-2');
+  if(lbl2) lbl2.textContent=DRILL.driver?`Equipes de "${DRILL.driver.slice(0,22)}"`:'Por Equipe';
+  buildDrillWaterfall(2, 'team', r2, DRILL.equipe);
+
+  // 3. Por Office — filtrado por driver + equipe
+  const r3=filterRows(data,{driver:DRILL.driver||null,equipe:DRILL.equipe||null});
+  buildDrillWaterfall(3, 'office', r3, DRILL.office);
+
+  // 4. Por Canal — filtrado por driver + equipe + office
+  const r4=filterRows(data,{driver:DRILL.driver||null,equipe:DRILL.equipe||null,office:DRILL.office||'ALL'});
+  buildDrillWaterfall(4, 'ch', r4, DRILL.canal, k=>CH_LABEL[k]||k);
+
+  buildSimulation();
+}
+
+function drillSelect(level, key) {
+  if(level===1){const t=DRILL.driver===key; DRILL.driver=t?null:key; DRILL.equipe=null; DRILL.office=null; DRILL.canal=null;}
+  if(level===2){const t=DRILL.equipe===key; DRILL.equipe=t?null:key; DRILL.office=null; DRILL.canal=null;}
+  if(level===3){const t=DRILL.office===key; DRILL.office=t?null:key; DRILL.canal=null;}
+  if(level===4){const t=DRILL.canal===key; DRILL.canal=t?null:key;}
+  buildDrillAll();
+}
+
+function drillReset(fromLevel) {
+  if(fromLevel<=1) DRILL.driver=null;
+  if(fromLevel<=2) DRILL.equipe=null;
+  if(fromLevel<=3) DRILL.office=null;
+  DRILL.canal=null;
+  buildDrillAll();
+}
+
+// ── SIMULAÇÃO ───────────────────────────────────────────────────────────────
+function buildSimulation() {
+  const dim=document.getElementById('sim-dim')?.value||'driver';
+  const mode=document.getElementById('sim-mode')?.value||'fix';
+  const data=getData();
+  const baseOv={driver:DRILL.driver||null,equipe:DRILL.equipe||null,office:DRILL.office||'ALL'};
+
+  let simRows, dimKey, dimLabel;
+  if(dim==='driver')   { simRows=filterRows(data,{driver:null,equipe:null}); dimKey='driver'; dimLabel='NPS Driver'; }
+  else if(dim==='office') { simRows=filterRows(data,baseOv); dimKey='office'; dimLabel='Office'; }
+  else                 { simRows=filterRows(data,baseOv); dimKey='team';    dimLabel='Equipe'; }
+
+  const simWeightFn = dim==='driver' ? driverBaselineWeight : null;
+  const allSegs=aggregateBy(simRows,dimKey,simWeightFn).filter(s=>s.enc>=10);
+  const totalEnc=simRows.reduce((s,r)=>s+(r.enc||0),0)||1;
+  const totalNpsW=simRows.reduce((s,r)=>s+(r.nps||0)*(r.enc||0),0);
+  const npsAtual=totalNpsW/totalEnc;
+  const negSegs=allSegs.filter(s=>s.gap<0).sort((a,b)=>a.contribution-b.contribution).slice(0,8);
+
+  if(!negSegs.length){
+    document.getElementById('sim-table-wrap').innerHTML=`<div style="font-size:11px;color:#00A650;text-align:center;padding:12px">✅ Todos os ${dimLabel}s acima da meta!</div>`;
+    return;
+  }
+
+  let rowsHtml='';
+  if(mode==='remove'){
+    rowsHtml=negSegs.map((sg,i)=>{
+      const encSem=totalEnc-sg.enc;
+      const npsSem=encSem>0?(totalNpsW-sg.nps*sg.enc)/encSem:npsAtual;
+      const delta=npsSem-npsAtual;
+      const isPos=delta>=0;
+      const volPct=(sg.enc/totalEnc)*100;
+      return `<tr style="border-bottom:1px solid #F5F5F5">
+        <td style="width:24px;font-size:11px;font-weight:700;color:#bbb;padding:6px 4px">${i+1}</td>
+        <td style="font-size:11px;padding:6px 8px;max-width:220px"><div style="font-weight:600;color:#333;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${sg.key}">${sg.key}</div>
+          <div style="font-size:10px;color:#999;margin-top:1px">${fmtEnc(sg.enc)} enc · NPS: <strong>${sg.nps.toFixed(1)}</strong> · GAP: ${fmtGap(sg.gap)} pp</div></td>
+        <td style="width:90px;text-align:right;font-size:11px;padding:6px">
+          <div style="font-size:10px;color:#888">${npsAtual.toFixed(2)} → <strong style="color:${isPos?'#00875A':'#F23D4F'}">${npsSem.toFixed(2)}</strong></div></td>
+        <td style="width:80px;text-align:right;padding:6px"><span style="font-size:13px;font-weight:800;color:${isPos?'#00875A':'#888'}">${isPos?'+':''}${delta.toFixed(2)} pp</span></td>
+        <td style="width:65px;text-align:right;font-size:10px;color:#aaa;padding:6px">${volPct.toFixed(1)}% vol</td>
+      </tr>`;
+    }).join('');
+    document.getElementById('sim-table-wrap').innerHTML=`
+      <table style="width:100%;border-collapse:collapse">
+        <thead><tr style="border-bottom:2px solid #F0F0F0">
+          <th style="width:24px;font-size:9px;font-weight:700;color:#aaa;padding:4px;text-transform:uppercase">#</th>
+          <th style="font-size:9px;font-weight:700;color:#aaa;padding:4px;text-align:left;text-transform:uppercase">${dimLabel}</th>
+          <th style="width:90px;font-size:9px;font-weight:700;color:#aaa;padding:4px;text-align:right;text-transform:uppercase">NPS sem ele</th>
+          <th style="width:80px;font-size:9px;font-weight:700;color:#aaa;padding:4px;text-align:right;text-transform:uppercase">Δ NPS</th>
+          <th style="width:65px;font-size:9px;font-weight:700;color:#aaa;padding:4px;text-align:right;text-transform:uppercase">% Vol</th>
+        </tr></thead><tbody>${rowsHtml}</tbody></table>`;
+  } else {
+    let cumGain=0;
+    const gains=negSegs.map(sg=>sg.enc*Math.abs(sg.gap)/totalEnc);
+    const maxGain=gains.reduce((s,g)=>s+g,0);
+    rowsHtml=negSegs.map((sg,i)=>{
+      const gain=gains[i]; cumGain+=gain;
+      const barPct=Math.round((gain/Math.max(maxGain,0.001))*100);
+      return `<tr style="border-bottom:1px solid #F5F5F5">
+        <td style="width:24px;font-size:11px;font-weight:700;color:#bbb;padding:6px 4px">${i+1}</td>
+        <td style="font-size:11px;padding:6px 8px;max-width:220px"><div style="font-weight:600;color:#333;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${sg.key}">${sg.key}</div>
+          <div style="font-size:10px;color:#999;margin-top:1px">${fmtEnc(sg.enc)} enc</div></td>
+        <td style="width:70px;text-align:right;font-size:11px;font-weight:700;color:#F23D4F;padding:6px">${fmtGap(sg.gap)} pp</td>
+        <td style="width:80px;text-align:right;padding:6px"><span style="font-size:12px;font-weight:800;color:#00875A">+${gain.toFixed(1)} pp</span></td>
+        <td style="width:120px;padding:6px 8px">
+          <div style="font-size:9px;color:#999;margin-bottom:3px">+${cumGain.toFixed(1)} pp acum.</div>
+          <div style="background:#F0F0F0;border-radius:3px;height:5px;overflow:hidden">
+            <div style="background:linear-gradient(90deg,#00A650,#00C060);height:100%;width:${barPct}%;border-radius:3px"></div></div></td>
+      </tr>`;
+    }).join('');
+    document.getElementById('sim-table-wrap').innerHTML=`
+      <div style="margin-bottom:10px;font-size:11px;color:#888">Base: <strong>${fmtEnc(totalEnc)} enc</strong> por <strong>${dimLabel}</strong>.</div>
+      <table style="width:100%;border-collapse:collapse">
+        <thead><tr style="border-bottom:2px solid #F0F0F0">
+          <th style="width:24px;font-size:9px;font-weight:700;color:#aaa;padding:4px;text-transform:uppercase">#</th>
+          <th style="font-size:9px;font-weight:700;color:#aaa;padding:4px;text-align:left;text-transform:uppercase">${dimLabel}</th>
+          <th style="width:70px;font-size:9px;font-weight:700;color:#aaa;padding:4px;text-align:right;text-transform:uppercase">GAP</th>
+          <th style="width:80px;font-size:9px;font-weight:700;color:#aaa;padding:4px;text-align:right;text-transform:uppercase">Ganho est.</th>
+          <th style="width:120px;font-size:9px;font-weight:700;color:#aaa;padding:4px;text-transform:uppercase">Progresso</th>
+        </tr></thead><tbody>${rowsHtml}</tbody></table>
+      <div style="margin-top:12px;padding:8px 12px;background:#FFFBEB;border-radius:6px;font-size:11px;color:#B45309;font-weight:700;display:flex;justify-content:space-between;align-items:center">
+        <span>🎯 Potencial total — resolver os ${negSegs.length} ${dimLabel}(s)</span>
+        <span style="font-size:14px;color:#00875A">+${maxGain.toFixed(1)} pp</span></div>`;
+  }
+}
+
+// ── GENERIC TABLE ────────────────────────────────────────────────────────────
+function buildImpactSection(containerId, segs, opts={}) {
+  const el=document.getElementById(containerId);
+  if(!segs||!segs.length){el.innerHTML='<div class="empty-msg">Sem dados para o filtro selecionado.</div>';return;}
+  const sorted=[...segs].sort((a,b)=>a.gap-b.gap);
+  const maxAbs=Math.max(...sorted.map(s=>Math.abs(s.gap)),1);
+  let negIdx=0;
+  const hasDet=segs.some(s=>s.det>0);
+  const rows=sorted.map((s,i)=>{
+    const bp=Math.round((Math.abs(s.gap)/maxAbs)*100);
+    const isNeg=s.gap<0;
+    const label=opts.labelFn?opts.labelFn(s):s.key;
+    const oppRank=isNeg&&negIdx===0?'🔥':isNeg&&negIdx<=2?'⚠️':'';
+    if(isNeg) negIdx++;
+    return `<tr style="${isNeg?'border-left:3px solid #F59E0B;border-bottom:1px solid #FEF3C7':'border-left:3px solid transparent'}">
+      <td style="width:28px;text-align:center;font-size:10px;font-weight:700;color:#bbb">${i+1}</td>
+      <td style="min-width:140px;max-width:280px">
+        <div style="font-size:11px;font-weight:${isNeg?'700':'500'};color:${isNeg?'#1a1a1a':'#888'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${oppRank?`<span style="margin-right:4px">${oppRank}</span>`:''}${label}</div>
+        <div style="margin-top:4px;background:#F0F0F0;border-radius:3px;height:5px;overflow:hidden;max-width:200px">
+          <div style="height:100%;border-radius:3px;width:${bp}%" class="impact-bar ${barCls(s.gap)}"></div></div></td>
+      <td class="tr" style="width:70px"><span class="${gapCls(s.gap)}" style="font-size:12px;font-weight:800">${fmtGap(s.gap)} pp</span></td>
+      <td class="tr" style="width:60px;font-size:11px;color:#3483FA;font-weight:700">${fmtNPS(s.nps)}</td>
+      <td class="tr" style="width:60px;font-size:11px;color:#9CA3AF">${fmtNPS(s.target)}</td>
+      <td class="tr" style="width:70px;font-size:11px;color:#888">${fmtEnc(s.enc)}</td>
+      <td class="tr" style="width:55px;font-size:10px;color:#aaa">${(s.weight*100).toFixed(1)}%</td>
+      ${hasDet?`<td class="tr" style="width:70px;font-size:11px;color:#F23D4F">${s.det?fmtEnc(s.det):'—'}</td>`:''}
+    </tr>`;
+  }).join('');
+  el.innerHTML=`<div class="dtable-wrap"><table>
+    <thead><tr>
+      <th style="width:28px"></th><th>${opts.colLabel||'Segmento'}</th>
+      <th class="tr">GAP</th><th class="tr">NPS</th><th class="tr">Meta</th>
+      <th class="tr">Volume</th><th class="tr">${opts.weightLabel||'% Rep'}</th>
+      ${hasDet?'<th class="tr">Detratores</th>':''}
+    </tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+
+function buildHighlight(segs) {
+  const neg=[...segs].filter(s=>s.gap<0).sort((a,b)=>a.gap-b.gap);
+  if(!neg.length) return `<div style="margin-top:14px;padding:10px 16px;background:#E6F9F1;border-radius:8px;font-size:11px;color:#00A650;font-weight:600">✅ Todos os segmentos acima da meta.</div>`;
+  const worst=neg[0];
+  return `<div style="margin-top:16px;background:#FAFAFA;border:1.5px solid #EBEBEB;border-radius:10px;overflow:hidden">
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 16px;background:#F5F5F5;border-bottom:1px solid #EBEBEB">
+      <span style="font-size:10px;font-weight:800;color:#555;text-transform:uppercase;letter-spacing:.5px">💡 Principal oportunidade</span>
+    </div>
+    <div style="padding:12px 16px">
+      <div style="font-size:12px;font-weight:700;color:#222;margin-bottom:4px">${worst.key.length>50?worst.key.slice(0,48)+'…':worst.key}</div>
+      <div style="font-size:11px;color:#888">GAP <strong style="color:#F23D4F">${fmtGap(worst.gap)} pp</strong> · ${fmtEnc(worst.enc)} enc${neg.length>1?` · <span style="color:#aaa">${neg.length-1} outros abaixo da meta</span>`:''}</div>
+      ${neg.length>1?`<div style="margin-top:8px;font-size:11px;color:#555;line-height:1.8">${neg.slice(1,5).map((s,i)=>`<span style="margin-right:12px"><strong>${i+2}.</strong> ${s.key.length>30?s.key.slice(0,28)+'…':s.key} <span style="color:#F23D4F;font-weight:700">${fmtGap(s.gap)} pp</span></span>`).join('')}</div>`:''}
+    </div>
+  </div>`;
+}
+
+// ── TABS CONTENT ─────────────────────────────────────────────────────────────
+function buildTabDriver() {
+  const segs=aggregateBy(filterRows(getData(),{driver:null,processo:null}),'driver',driverBaselineWeight).filter(s=>s.enc>=10);
+  document.getElementById('tbadge-driver').textContent=segs.length;
+  const el=document.getElementById('tab-driver');
+  el.innerHTML=`<span class="section-title-bar">GAP vs Meta por NPS Driver</span><div id="tab-driver-inner"></div><div id="tab-driver-hl"></div>`;
+  buildImpactSection('tab-driver-inner', segs, {colLabel:'NPS Driver', weightLabel:'% Baseline'});
+  document.getElementById('tab-driver-hl').innerHTML=buildHighlight(segs);
+}
+
+function buildTabProcesso() {
+  const driverFilter=document.getElementById('proc-f-driver')?.value||'ALL';
+  const data=getData();
+  const allDrivers=[...new Set(data.map(r=>r.driver).filter(Boolean))].sort();
+  const driverOpts=allDrivers.map(d=>`<option value="${d}" ${driverFilter===d?'selected':''}>${d}</option>`).join('');
+
+  let rows=filterRows(data,{driver:null,processo:null});
+  if(driverFilter!=='ALL') rows=rows.filter(r=>r.driver===driverFilter);
+  const allSegs=aggregateBy(rows,'processo').filter(s=>s.enc>=10).sort((a,b)=>a.gap-b.gap);
+  const segs=allSegs.slice(0,12);
+  document.getElementById('tbadge-processo').textContent=allSegs.length;
+
+  const el=document.getElementById('tab-processo');
+  el.innerHTML=`<span class="section-title-bar">GAP vs Meta por Processo (Top 12)</span>
+    <div class="section-filters">
+      <span class="sf-lbl">Driver:</span>
+      <select class="sfsel" id="proc-f-driver" onchange="buildTabProcesso()">
+        <option value="ALL">Todos</option>${driverOpts}
+      </select>
+    </div>
+    <div id="tab-processo-inner"></div><div id="tab-processo-hl"></div>`;
+  buildImpactSection('tab-processo-inner', segs, {colLabel:'Processo'});
+  document.getElementById('tab-processo-hl').innerHTML=buildHighlight(allSegs);
+}
+
+function buildTabOffice() {
+  const driverFilter=document.getElementById('off-f-driver')?.value||'ALL';
+  const data=getData();
+  const allDrivers=[...new Set(data.map(r=>r.driver).filter(Boolean))].sort();
+  const driverOpts=allDrivers.map(d=>`<option value="${d}" ${driverFilter===d?'selected':''}>${d}</option>`).join('');
+
+  let rows=filterRows(data,{driver:null,processo:null});
+  if(driverFilter!=='ALL') rows=rows.filter(r=>r.driver===driverFilter);
+  const segs=aggregateBy(rows,'office').filter(s=>s.enc>=10);
+  document.getElementById('tbadge-office').textContent=segs.length;
+
+  const el=document.getElementById('tab-office');
+  el.innerHTML=`<span class="section-title-bar">GAP vs Meta por Office</span>
+    <div class="section-filters">
+      <span class="sf-lbl">Driver:</span>
+      <select class="sfsel" id="off-f-driver" onchange="buildTabOffice()">
+        <option value="ALL">Todos</option>${driverOpts}
+      </select>
+    </div>
+    <div id="tab-office-inner"></div><div id="tab-office-hl"></div>`;
+  buildImpactSection('tab-office-inner', segs, {colLabel:'Office'});
+  document.getElementById('tab-office-hl').innerHTML=buildHighlight(segs);
+}
+
+function buildTabCanal() {
+  const segs=aggregateBy(filterRows(getData(),{driver:null,processo:null}),'ch').filter(s=>s.enc>=5);
+  document.getElementById('tbadge-canal').textContent=segs.length;
+  const el=document.getElementById('tab-canal');
+  el.innerHTML=`<span class="section-title-bar">GAP vs Meta por Canal</span><div id="tab-canal-inner"></div><div id="tab-canal-hl"></div>`;
+  buildImpactSection('tab-canal-inner', segs, {
+    colLabel:'Canal',
+    labelFn:s=>CH_LABEL[s.key]||s.key,
+  });
+  document.getElementById('tab-canal-hl').innerHTML=buildHighlight(segs);
+}
+
+// ── INIT ─────────────────────────────────────────────────────────────────────
+populateFilters();
+buildReport();
+</script>
+</body>
+</html>
