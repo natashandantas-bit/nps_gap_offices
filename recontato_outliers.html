@@ -63,10 +63,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .heatmap-table{border-collapse:collapse;width:100%;font-size:11px}
 .heatmap-table th{padding:6px 10px;background:#FAFAFA;font-size:9px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.3px;border-bottom:2px solid #F0F0F0;white-space:nowrap;text-align:center}
 .heatmap-table th.row-hdr{text-align:left}
-.heatmap-table td{padding:5px 6px;text-align:center;border:1px solid #F5F5F5;font-weight:700;font-size:11px;border-radius:0;cursor:default;transition:opacity .15s}
-.heatmap-table td.row-label{text-align:left;font-weight:600;color:#555;padding:5px 10px;background:#FAFAFA;font-size:11px;white-space:nowrap}
+.heatmap-table td{padding:5px 6px;text-align:center;border:1px solid #F5F5F5;font-weight:700;font-size:11px;border-radius:0;cursor:pointer;transition:opacity .15s}
+.heatmap-table td.row-label{text-align:left;font-weight:600;color:#555;padding:5px 10px;background:#FAFAFA;font-size:11px;white-space:nowrap;cursor:default}
 .heatmap-table tr:hover td{opacity:.85}
-/* Nova escala: acima de 5% já é amarelo/vermelho */
+/* Escala: acima de 5% já é amarelo/vermelho */
 .heat-0{background:#E6F9F1;color:#00A650}
 .heat-1{background:#FFF9C4;color:#856404}
 .heat-2{background:#FFE0C0;color:#C05000}
@@ -76,6 +76,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .hml-item{display:flex;align-items:center;gap:4px;font-size:10px;color:#666}
 .hml-box{width:14px;height:14px;border-radius:3px}
 
+/* HEATMAP VIEW BUTTONS */
+.hm-view-btns{display:flex;gap:6px;margin-bottom:12px}
+
 /* PARETO */
 .pareto-wrap{position:relative;height:320px}
 
@@ -83,9 +86,39 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .scatter-wrap{position:relative;height:340px}
 
 /* WATERFALL */
-.waterfall-wrap{position:relative;height:360px}
+.waterfall-wrap{position:relative;height:400px}
 
-/* MANAGER RANKING */
+/* RANKING RICO */
+.ranking-list{display:flex;flex-direction:column;gap:10px}
+.rank-card{background:#FAFAFA;border-radius:10px;padding:14px 16px;border:1px solid #F0F0F0;transition:background .15s}
+.rank-card:hover{background:#F5F5F5}
+.rank-card-header{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.rank-num{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0}
+.rank-num.r1{background:#FEECEF;color:#F23D4F}
+.rank-num.r2{background:#FFF3E0;color:#E65100}
+.rank-num.r3{background:#FFF9C4;color:#856404}
+.rank-num.rn{background:#F5F5F5;color:#999}
+.rank-num.rok{background:#E6F9F1;color:#00A650}
+.rank-name{flex:1;font-size:13px;font-weight:700;color:#222}
+.rank-office-badge{font-size:9px;font-weight:700;padding:2px 7px;border-radius:3px;background:#FFF0F0;color:#DC2626;text-transform:uppercase;flex-shrink:0}
+.rank-pct-val{font-size:22px;font-weight:800;min-width:58px;text-align:right}
+.rank-card-body{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:start}
+.rank-bar-section{flex:1}
+.rank-bar-wrap{background:#E8E8E8;border-radius:4px;height:8px;overflow:hidden;margin-bottom:5px}
+.rank-bar{height:100%;border-radius:4px}
+.rank-bar.danger{background:linear-gradient(90deg,#F23D4F,#FF6B6B)}
+.rank-bar.warn{background:linear-gradient(90deg,#FF7733,#FFAA66)}
+.rank-bar.ok{background:linear-gradient(90deg,#00A650,#34D399)}
+.rank-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:4px}
+.rank-vol{font-size:10px;color:#888}
+.rank-share{font-size:10px;color:#555;font-weight:600}
+.rank-delta-pill{font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;display:inline-flex;align-items:center;gap:2px}
+.rank-delta-up{background:#FEECEF;color:#F23D4F}
+.rank-delta-dn{background:#E6F9F1;color:#00A650}
+.rank-top-items{margin-top:6px;font-size:10px;color:#777;display:flex;flex-wrap:wrap;gap:4px}
+.rank-top-tag{background:#EBF3FF;color:#1D4ED8;padding:1px 6px;border-radius:3px;font-weight:600;font-size:9px}
+
+/* MANAGER RANKING (compatibilidade) */
 .manager-list{display:flex;flex-direction:column;gap:6px}
 .mgr-row{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;background:#FAFAFA;cursor:pointer;transition:background .15s}
 .mgr-row:hover{background:#F0F0F0}
@@ -139,12 +172,29 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .conc-val{font-size:11px;font-weight:800;min-width:44px;text-align:right;color:#F23D4F}
 .conc-pct-num{font-size:10px;color:#aaa;min-width:36px;text-align:right}
 
-/* SENIORITY SIMPLE */
+/* SENIORITY */
 .sen-table{border-collapse:collapse;width:100%;margin-top:14px}
 .sen-table th{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:#999;padding:6px 10px;border-bottom:2px solid #F0F0F0;text-align:left}
 .sen-table td{padding:7px 10px;border-bottom:1px solid #F7F7F7;font-size:11px;vertical-align:middle}
 .sen-table tr:hover td{background:#FAFAFA}
 .sen-table td.tr{text-align:right}
+.sen-pill-above{background:#FEECEF;color:#C0192A;padding:2px 7px;border-radius:10px;font-size:9px;font-weight:700}
+.sen-pill-below{background:#E6F9F1;color:#00A650;padding:2px 7px;border-radius:10px;font-size:9px;font-weight:700}
+.sen-prog-wrap{width:100px;background:#F0F0F0;border-radius:4px;height:7px;overflow:hidden;display:inline-block;vertical-align:middle}
+.sen-prog{height:100%;border-radius:4px}
+
+/* SIMULACAO IMPACTO */
+.sim-section{margin-top:24px;padding-top:16px;border-top:2px solid #F0F0F0}
+.sim-title{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:#888;margin-bottom:14px}
+.sim-cards{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.sim-card{background:#FAFAFA;border-radius:10px;padding:16px;border:1px solid #E8E8E8}
+.sim-card-title{font-size:11px;font-weight:700;color:#555;margin-bottom:12px}
+.sim-vals{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.sim-val-block{text-align:center}
+.sim-val-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;color:#aaa;margin-bottom:3px}
+.sim-val-num{font-size:22px;font-weight:800}
+.sim-arrow{font-size:18px;color:#aaa}
+.sim-gain{font-size:12px;font-weight:700;padding:4px 10px;border-radius:8px;background:#E6F9F1;color:#00A650}
 
 /* TABS */
 .tabs-nav{background:#fff;border-radius:10px 10px 0 0;border-bottom:2px solid #E8E8E8;padding:0 20px;display:flex;overflow-x:auto;box-shadow:0 1px 3px rgba(0,0,0,.05);margin-bottom:0}
@@ -170,6 +220,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   .kpi-row{grid-template-columns:1fr 1fr}
   .two-col{grid-template-columns:1fr}
   .three-col{grid-template-columns:1fr}
+  .sim-cards{grid-template-columns:1fr}
 }
 </style>
 </head>
@@ -231,15 +282,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <div class="kcard ok"><div class="kcard-lbl">Maior Concentração</div><div class="kcard-val" id="kpi-top-team">—</div><div class="kcard-sub" id="kpi-top-team-pct">equipe com maior % outlier</div></div>
   </div>
 
-  <!-- MAPA DE CALOR: Office × Equipe -->
+  <!-- MAPA DE CALOR: 3 visões -->
   <div class="panel">
     <div class="panel-header">
       <div>
-        <div class="panel-title">🔥 Mapa de Calor — % Outliers por Office × Equipe</div>
+        <div class="panel-title">🔥 Mapa de Calor — % Outliers</div>
         <div class="panel-sub">Intensidade da cor = taxa de outlier. Verde = abaixo de 5% (target). Clique em uma célula para filtrar.</div>
       </div>
       <div class="panel-toolbar">
-        <span style="font-size:10px;font-weight:700;color:#888;text-transform:uppercase">Mostrar</span>
+        <span style="font-size:10px;font-weight:700;color:#888;text-transform:uppercase">Visão</span>
+        <button class="ptbtn active" id="hm-view-equipe" onclick="setHmView('equipe')">Equipe</button>
+        <button class="ptbtn" id="hm-view-office" onclick="setHmView('office')">Office</button>
+        <button class="ptbtn" id="hm-view-canal" onclick="setHmView('canal')">Canal</button>
+        <span style="font-size:10px;font-weight:700;color:#888;text-transform:uppercase;margin-left:8px">Mostrar</span>
         <button class="ptbtn active" id="hm-btn-pct" onclick="setHmMode('pct')">% Outlier</button>
         <button class="ptbtn" id="hm-btn-vol" onclick="setHmMode('vol')">Volume</button>
       </div>
@@ -296,7 +351,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
           <select class="sfsel" id="scatter-dim" onchange="buildScatter()">
             <option value="team">Por Equipe</option>
             <option value="office">Por Office</option>
-            <option value="sr_manager">Por SR Manager</option>
           </select>
         </div>
       </div>
@@ -307,18 +361,21 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
   </div>
 
-  <!-- WATERFALL DE IMPACTO -->
+  <!-- WATERFALL DE IMPACTO (clássico) -->
   <div class="panel">
     <div class="panel-header">
       <div>
         <div class="panel-title">📉 Waterfall de Impacto por Dimensão</div>
-        <div class="panel-sub">Desvio de cada segmento em relação ao target de 5%. Vermelho = acima do target (contribuição negativa). Verde = abaixo.</div>
+        <div class="panel-sub">Desvio ponderado de cada segmento em relação ao % outlier geral. Vermelho = contribui para piorar; Verde = contribui para melhorar.</div>
       </div>
       <div class="panel-toolbar">
         <select class="sfsel" id="waterfall-dim" onchange="buildWaterfall()">
           <option value="team">Equipe</option>
           <option value="office">Office</option>
-          <option value="sr_manager">SR Manager</option>
+          <option value="canal">Canal</option>
+          <option value="cdu">CDU</option>
+          <option value="subcdu">Sub-CDU</option>
+          <option value="solution">Solução</option>
         </select>
       </div>
     </div>
@@ -338,14 +395,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <button class="tab-btn" onclick="switchTab('concentration')" id="tab-btn-concentration">🔎 Concentração</button>
   </div>
 
-  <!-- TAB: RANKING -->
+  <!-- TAB: RANKING RICO -->
   <div class="tab-content active" id="tab-managers">
     <div class="sec-title">Segmentos ordenados por % de outlier (maior → menor)</div>
     <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
       <select class="sfsel" id="mgr-group" onchange="buildManagers()">
         <option value="team">Equipe</option>
         <option value="office">Office</option>
-        <option value="sr_manager">SR Manager</option>
+        <option value="canal">Canal</option>
       </select>
       <select class="sfsel" id="mgr-sort" onchange="buildManagers()">
         <option value="pct">Ordenar por % Outlier</option>
@@ -357,7 +414,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         Somente acima do target
       </label>
     </div>
-    <div class="manager-list" id="manager-list">
+    <div class="ranking-list" id="manager-list">
       <div class="empty-msg">Carregue os dados para ver o ranking.</div>
     </div>
   </div>
@@ -369,7 +426,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <select class="sfsel" id="mom-group" onchange="buildMoM()">
         <option value="team">Por Equipe</option>
         <option value="office">Por Office</option>
-        <option value="sr_manager">Por SR Manager</option>
+        <option value="canal">Por Canal</option>
       </select>
       <select class="sfsel" id="mom-sort" onchange="buildMoM()">
         <option value="delta_desc">Maior piora primeiro</option>
@@ -426,6 +483,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         </tbody>
       </table>
     </div>
+    <div id="cdu-sim"></div>
   </div>
 
   <!-- TAB: Sub-CDU -->
@@ -457,6 +515,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         </tbody>
       </table>
     </div>
+    <div id="subcdu-sim"></div>
   </div>
 
   <!-- TAB: SOLUÇÃO -->
@@ -488,23 +547,27 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         </tbody>
       </table>
     </div>
+    <div id="solution-sim"></div>
   </div>
 
   <!-- TAB: SENIORIDADE -->
   <div class="tab-content" id="tab-seniority">
-    <div class="sec-title">% Outlier por faixa de senioridade do agente</div>
+    <div class="sec-title">% Outlier por Senioridade do Agente</div>
     <div style="position:relative;height:280px;margin-bottom:16px"><canvas id="sen-chart"></canvas></div>
     <table class="sen-table" id="sen-table">
       <thead>
         <tr>
-          <th>Faixa</th>
+          <th>#</th>
+          <th>Faixa de Senioridade</th>
           <th class="tr">Total Casos</th>
           <th class="tr">Outliers</th>
           <th class="tr">% Outlier</th>
+          <th class="tr">vs Target</th>
+          <th class="tr">Participação nos Outliers Totais</th>
         </tr>
       </thead>
       <tbody id="sen-tbody">
-        <tr><td colspan="4" class="empty-msg">Carregue os dados.</td></tr>
+        <tr><td colspan="7" class="empty-msg">Carregue os dados.</td></tr>
       </tbody>
     </table>
   </div>
@@ -516,7 +579,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <select class="sfsel" id="conc-dim" onchange="buildConcentration()">
         <option value="team">Por Equipe</option>
         <option value="office">Por Office</option>
-        <option value="sr_manager">Por SR Manager</option>
         <option value="process">Por Processo</option>
       </select>
       <span style="font-size:11px;color:#888;align-self:center">Barras azuis = casos totais · Barras vermelhas = outliers</span>
@@ -539,6 +601,7 @@ const TARGET = 0.05;
 let RAW  = [];
 let DATA = [];
 let hmMode = 'pct';
+let hmView = 'equipe'; // 'equipe' = Office×Equipe | 'office' = Canal×Equipe | 'canal' = Office×Canal
 let paretoChart = null, scatterChart = null, senChart = null, waterfallChart = null;
 const MONTH_LABELS = {
   '01':'Jan','02':'Fev','03':'Mar','04':'Abr','05':'Mai','06':'Jun',
@@ -614,7 +677,7 @@ function groupBy(rows, keyFn){
   const map = {};
   rows.forEach(r=>{
     const k = keyFn(r);
-    if(!map[k]) map[k]={key:k,num:0,den:0,processes:new Set(),cdus:new Set(),subcdus:new Set(),solutions:new Set()};
+    if(!map[k]) map[k]={key:k,num:0,den:0,processes:new Set(),cdus:new Set(),subcdus:new Set(),solutions:new Set(),office:r.office};
     map[k].num += r.num;
     map[k].den += r.den;
     r.processes.forEach(p=>map[k].processes.add(p));
@@ -654,32 +717,68 @@ function updateTopbar(){
   }
 }
 
-// ── KPIs ──────────────────────────────────────────────────────────────────────
+// ── KPIs (ajuste #1: delta comparativo correto por granularidade) ──────────────
 function buildKPIs(){
   const totalNum = DATA.reduce((s,r)=>s+r.num,0);
   const totalDen = DATA.reduce((s,r)=>s+r.den,0);
   const pct = totalDen>0 ? totalNum/totalDen : 0;
 
-  // mês anterior usando RAW diretamente
-  const dates = [...new Set(RAW.map(r=>r.date))].sort();
+  const gran = document.getElementById('f-gran').value;
+
   let deltaHtml = '<span class="delta-neu">sem dado anterior</span>';
-  if(dates.length>=2){
-    const prevDate = dates[dates.length-2];
-    const prevRows = RAW.filter(r=>r.date===prevDate);
-    const pn = prevRows.reduce((s,r)=>s+r.num,0);
-    const pd = prevRows.reduce((s,r)=>s+r.den,0);
-    const prevPct = pd>0 ? pn/pd : 0;
-    const delta = pct - prevPct;
-    const sign = delta>0?'▲':'▼';
-    const cls  = delta>0?'delta-up':'delta-down';
-    deltaHtml = `<span class="${cls}">${sign} ${(Math.abs(delta)*100).toFixed(1)}pp vs. mês anterior</span>`;
+
+  if(gran === 'SEMANA'){
+    // filtra RAW por granularity=SEMANA, pega penúltimo date distinto
+    const semRows = RAW.filter(r=>r.granularity==='SEMANA');
+    const semDates = [...new Set(semRows.map(r=>r.date))].sort();
+    if(semDates.length>=2){
+      const prevDate = semDates[semDates.length-2];
+      const f = getFilters();
+      const prevRows = RAW.filter(r=>{
+        if(r.granularity!=='SEMANA') return false;
+        if(r.date!==prevDate) return false;
+        if(f.team!=='ALL'      && r.team!==f.team)           return false;
+        if(f.office!=='ALL'    && r.office!==f.office)        return false;
+        if(f.canal!=='ALL'     && r.canal!==f.canal)          return false;
+        if(f.srmanager!=='ALL' && r.srmanager!==f.srmanager)  return false;
+        return true;
+      });
+      const pn = prevRows.reduce((s,r)=>s+r.num,0);
+      const pd = prevRows.reduce((s,r)=>s+r.den,0);
+      const prevPct = pd>0 ? pn/pd : 0;
+      const delta = pct - prevPct;
+      const sign = delta>0?'▲':'▼';
+      const cls  = delta>0?'delta-up':'delta-down';
+      deltaHtml = `<span class="${cls}">${sign} ${delta>0?'+':''}${(delta*100).toFixed(1)}pp vs período anterior</span>`;
+    }
+  } else {
+    // MES ou ALL: compara com mês anterior (penúltimo date distinto em RAW)
+    const allDates = [...new Set(RAW.map(r=>r.date))].sort();
+    if(allDates.length>=2){
+      const prevDate = allDates[allDates.length-2];
+      const f = getFilters();
+      const prevRows = RAW.filter(r=>{
+        if(r.date!==prevDate) return false;
+        if(gran!=='ALL' && r.granularity!==gran) return false;
+        if(f.team!=='ALL'      && r.team!==f.team)           return false;
+        if(f.office!=='ALL'    && r.office!==f.office)        return false;
+        if(f.canal!=='ALL'     && r.canal!==f.canal)          return false;
+        if(f.srmanager!=='ALL' && r.srmanager!==f.srmanager)  return false;
+        return true;
+      });
+      const pn = prevRows.reduce((s,r)=>s+r.num,0);
+      const pd = prevRows.reduce((s,r)=>s+r.den,0);
+      const prevPct = pd>0 ? pn/pd : 0;
+      const delta = pct - prevPct;
+      const sign = delta>0?'▲':'▼';
+      const cls  = delta>0?'delta-up':'delta-down';
+      deltaHtml = `<span class="${cls}">${sign} ${delta>0?'+':''}${(delta*100).toFixed(1)}pp vs período anterior</span>`;
+    }
   }
 
   // teams above TARGET
   const byTeam = groupBy(DATA, r=>r.team);
   const teamsAbove = byTeam.filter(t=>t.pct>TARGET).length;
-
-  // equipe com MAIOR % de outlier (não maior volume)
   const byTeamSorted = [...byTeam].sort((a,b)=>b.pct-a.pct);
 
   document.getElementById('kpi-total').textContent     = fmtNum(totalDen);
@@ -696,7 +795,15 @@ function buildKPIs(){
   }
 }
 
-// ── HEATMAP ───────────────────────────────────────────────────────────────────
+// ── HEATMAP (ajuste #2: 3 visões + clique filtra) ─────────────────────────────
+function setHmView(v){
+  hmView = v;
+  ['equipe','office','canal'].forEach(x=>{
+    document.getElementById('hm-view-'+x).classList.toggle('active', x===v);
+  });
+  buildHeatmap();
+}
+
 function setHmMode(m){
   hmMode=m;
   document.getElementById('hm-btn-pct').classList.toggle('active',m==='pct');
@@ -706,32 +813,60 @@ function setHmMode(m){
 
 function buildHeatmap(){
   const wrap = document.getElementById('heatmap-wrap');
-  const offices    = [...new Set(DATA.map(r=>r.office))].sort();
-  const teamsFull  = [...new Set(DATA.map(r=>r.team))].sort();
-  const teams      = teamsFull.map(t=>t.replace('BR_','').replace(/_/g,' '));
-  if(!offices.length||!teamsFull.length){ wrap.innerHTML='<div class="empty-msg">Sem dados para o filtro atual.</div>'; return; }
+  if(!DATA.length){ wrap.innerHTML='<div class="empty-msg">Sem dados para o filtro atual.</div>'; return; }
+
+  // Define eixos conforme visão:
+  // 'equipe' → linhas=Office, colunas=Equipe
+  // 'office' → linhas=Canal, colunas=Equipe
+  // 'canal'  → linhas=Office, colunas=Canal
+  let rowsFn, colsFn, rowKey, colKey, rowLabel, colLabel;
+  if(hmView==='equipe'){
+    rowKey='office'; colKey='team';
+    rowLabel='Office'; colLabel='Equipe';
+    rowsFn=r=>r.office; colsFn=r=>r.team;
+  } else if(hmView==='office'){
+    rowKey='canal'; colKey='team';
+    rowLabel='Canal'; colLabel='Equipe';
+    rowsFn=r=>r.canal; colsFn=r=>r.team;
+  } else {
+    rowKey='office'; colKey='canal';
+    rowLabel='Office'; colLabel='Canal';
+    rowsFn=r=>r.office; colsFn=r=>r.canal;
+  }
+
+  const rowVals = [...new Set(DATA.map(rowsFn))].sort();
+  const colVals = [...new Set(DATA.map(colsFn))].sort();
+  if(!rowVals.length||!colVals.length){ wrap.innerHTML='<div class="empty-msg">Sem dados para o filtro atual.</div>'; return; }
 
   const matrix = {};
   DATA.forEach(r=>{
-    const k = r.office+'|'+r.team;
-    if(!matrix[k]) matrix[k]={num:0,den:0};
+    const k = rowsFn(r)+'|||'+colsFn(r);
+    if(!matrix[k]) matrix[k]={num:0,den:0,rowVal:rowsFn(r),colVal:colsFn(r)};
     matrix[k].num+=r.num; matrix[k].den+=r.den;
   });
 
   const maxVol = Math.max(...Object.values(matrix).map(v=>v.num),1);
 
-  let html = '<table class="heatmap-table"><thead><tr><th class="row-hdr">Office</th>';
-  teams.forEach(t=>{ html+=`<th title="${t}">${t.length>14?t.substring(0,12)+'…':t}</th>`; });
+  const shortLbl = s => {
+    const t = s.replace('BR_','').replace(/_/g,' ');
+    return t.length>14 ? t.substring(0,12)+'…' : t;
+  };
+
+  let html = `<table class="heatmap-table"><thead><tr><th class="row-hdr">${rowLabel} \\ ${colLabel}</th>`;
+  colVals.forEach(c=>{ html+=`<th title="${c}">${shortLbl(c)}</th>`; });
   html += '</tr></thead><tbody>';
-  offices.forEach(office=>{
-    html+=`<tr><td class="row-label">${office}</td>`;
-    teamsFull.forEach(tf=>{
-      const cell = matrix[office+'|'+tf];
+
+  rowVals.forEach(rv=>{
+    html+=`<tr><td class="row-label">${rv.replace('BR_','').replace(/_/g,' ')}</td>`;
+    colVals.forEach(cv=>{
+      const cell = matrix[rv+'|||'+cv];
       if(!cell||cell.den===0){ html+='<td style="background:#F8F8F8;color:#ccc">—</td>'; return; }
       const pct  = cell.num/cell.den;
       const cls  = hmMode==='pct' ? heatClass(pct) : heatClassVol(cell.num/maxVol);
       const val  = hmMode==='pct' ? fmtPct(pct) : fmtNum(cell.num);
-      html+=`<td class="${cls}" title="${fmtPct(pct)} | ${fmtNum(cell.num)} outliers / ${fmtNum(cell.den)} casos">${val}</td>`;
+      // onclick filtra: define qual select setar baseado em rowKey/colKey
+      const onclk = `hmCellClick('${rowKey}','${rv.replace(/'/g,"\\'")}','${colKey}','${cv.replace(/'/g,"\\'")}')`;
+      html+=`<td class="${cls}" title="${fmtPct(pct)} | ${fmtNum(cell.num)} outliers / ${fmtNum(cell.den)} casos" onclick="${onclk}">${val}</td>`;
     });
     html+='</tr>';
   });
@@ -740,13 +875,28 @@ function buildHeatmap(){
   document.getElementById('hm-legend').style.display='flex';
 }
 
-// Nova escala: < 5% verde, 5-10% amarelo, 10-20% laranja, 20-35% vermelho claro, >35% vermelho escuro
+function hmCellClick(rowKey, rowVal, colKey, colVal){
+  // mapeia rowKey/colKey para o id do select na filter-bar
+  const keyToSel = { office:'f-office', team:'f-team', canal:'f-canal' };
+  const selRow = keyToSel[rowKey];
+  const selCol = keyToSel[colKey];
+  if(selRow){
+    const el = document.getElementById(selRow);
+    if(el){ el.value = rowVal; }
+  }
+  if(selCol){
+    const el = document.getElementById(selCol);
+    if(el){ el.value = colVal; }
+  }
+  render();
+}
+
 function heatClass(pct){
-  if(pct < TARGET)   return 'heat-0';  // < 5%
-  if(pct < 0.10)     return 'heat-1';  // 5–10%
-  if(pct < 0.20)     return 'heat-2';  // 10–20%
-  if(pct < 0.35)     return 'heat-3';  // 20–35%
-  return 'heat-4';                     // > 35%
+  if(pct < TARGET)   return 'heat-0';
+  if(pct < 0.10)     return 'heat-1';
+  if(pct < 0.20)     return 'heat-2';
+  if(pct < 0.35)     return 'heat-3';
+  return 'heat-4';
 }
 function heatClassVol(ratio){
   if(ratio<0.10) return 'heat-0';
@@ -816,11 +966,11 @@ function buildPareto(){
   });
 }
 
-// ── SCATTER / BUBBLE ──────────────────────────────────────────────────────────
+// ── SCATTER / BUBBLE (ajuste #3: sem SR Manager) ──────────────────────────────
 function buildScatter(){
   const dim = document.getElementById('scatter-dim')?.value || 'team';
   if(!DATA.length) return;
-  const keyFn = dim==='team' ? r=>r.team : dim==='office' ? r=>r.office : r=>r.srmanager;
+  const keyFn = dim==='team' ? r=>r.team : r=>r.office;
   const groups = groupBy(DATA, keyFn);
 
   const maxDen = Math.max(...groups.map(g=>g.den),1);
@@ -871,19 +1021,66 @@ function buildScatter(){
   });
 }
 
-// ── WATERFALL DE IMPACTO ──────────────────────────────────────────────────────
+// ── WATERFALL CLÁSSICO (ajuste #4 e #5) ───────────────────────────────────────
 function buildWaterfall(){
   const dim = document.getElementById('waterfall-dim')?.value || 'team';
   if(!DATA.length) return;
-  const keyFn = dim==='team' ? r=>r.team : dim==='office' ? r=>r.office : r=>r.srmanager;
-  const groups = groupBy(DATA, keyFn).filter(g=>g.den>0);
-  // desvio = pct - TARGET
-  groups.sort((a,b)=>(b.pct-TARGET)-(a.pct-TARGET));
-  const top = groups.slice(0,20);
 
-  const labels  = top.map(g=>g.key.replace('BR_','').replace(/_/g,' '));
-  const desvios = top.map(g=> Math.round((g.pct - TARGET)*1000)/10);
-  const colors  = desvios.map(d=> d > 0 ? 'rgba(242,61,79,.8)' : 'rgba(0,166,80,.75)');
+  let groups;
+  if(dim==='team'){
+    groups = groupBy(DATA, r=>r.team).filter(g=>g.den>0);
+  } else if(dim==='office'){
+    groups = groupBy(DATA, r=>r.office).filter(g=>g.den>0);
+  } else if(dim==='canal'){
+    groups = groupBy(DATA, r=>r.canal).filter(g=>g.den>0);
+  } else if(dim==='cdu'){
+    groups = buildExplodedGroups('cdus');
+  } else if(dim==='subcdu'){
+    groups = buildExplodedGroups('subcdus');
+  } else {
+    groups = buildExplodedGroups('solutions');
+  }
+
+  const totalNum = DATA.reduce((s,r)=>s+r.num,0);
+  const totalDen = DATA.reduce((s,r)=>s+r.den,0);
+  const overallPct = totalDen>0 ? totalNum/totalDen : 0;
+
+  // desvio ponderado = (seg_den/total_den) * (seg_pct - overall_pct)
+  groups = groups.map(g=>({
+    ...g,
+    wDev: totalDen>0 ? (g.den/totalDen)*(g.pct - overallPct) : 0
+  }));
+  groups.sort((a,b)=>b.wDev-a.wDev);
+  const top12 = groups.slice(0,12);
+
+  // Monta labels e dados para o Chart.js floating bar
+  // Estrutura: [barra geral] + [barras flutuantes de segmentos] + [barra target]
+  const labels = ['GERAL', ...top12.map(g=>g.key.replace('BR_','').replace(/_/g,' ').substring(0,18)), 'TARGET'];
+  const floatData = [];
+  const bgColors  = [];
+
+  // Barra cinza inicial: de 0 até overallPct*100
+  floatData.push([0, overallPct*100]);
+  bgColors.push('rgba(150,150,160,.75)');
+
+  // Barras flutuantes dos segmentos — acumula base
+  let base = overallPct*100;
+  top12.forEach(g=>{
+    const delta = g.wDev*100;
+    if(delta>=0){
+      floatData.push([base, base+delta]);
+      bgColors.push('rgba(242,61,79,.82)');
+      base += delta;
+    } else {
+      floatData.push([base+delta, base]);
+      bgColors.push('rgba(0,166,80,.75)');
+      base += delta;
+    }
+  });
+
+  // Barra azul final: TARGET de 0 até 5%
+  floatData.push([0, TARGET*100]);
+  bgColors.push('rgba(52,131,250,.85)');
 
   if(waterfallChart) waterfallChart.destroy();
   waterfallChart = new Chart(document.getElementById('waterfall-chart'),{
@@ -891,47 +1088,82 @@ function buildWaterfall(){
     data:{
       labels,
       datasets:[{
-        label:'Desvio vs Target (pp)',
-        data: desvios,
-        backgroundColor: colors,
-        borderRadius: 4
+        label:'Waterfall',
+        data: floatData,
+        backgroundColor: bgColors,
+        borderRadius: 3,
+        borderSkipped: false
       }]
     },
     options:{
-      indexAxis:'y',
       responsive:true, maintainAspectRatio:false,
       plugins:{
         legend:{display:false},
         datalabels:{
           display:true,
           anchor:'end',
-          align: ctx => ctx.dataset.data[ctx.dataIndex] >= 0 ? 'right' : 'left',
-          formatter: v => (v>=0?'+':'')+v.toFixed(1)+'pp',
+          align: ctx=>{
+            const d=ctx.dataset.data[ctx.dataIndex];
+            if(!Array.isArray(d)) return 'top';
+            return d[1]>=d[0]?'top':'bottom';
+          },
+          formatter:(v,ctx)=>{
+            const d=ctx.dataset.data[ctx.dataIndex];
+            if(!Array.isArray(d)) return '';
+            const idx=ctx.dataIndex;
+            if(idx===0) return fmtPct(d[1]/100);
+            if(idx===labels.length-1) return fmtPct(TARGET);
+            const delta=d[1]-d[0];
+            return (delta>=0?'+':'')+delta.toFixed(2)+'pp';
+          },
           font:{size:9,weight:'bold'},
-          color: ctx => ctx.dataset.data[ctx.dataIndex] >= 0 ? '#C0192A' : '#00A650'
+          color:ctx=>{
+            const idx=ctx.dataIndex;
+            if(idx===0||idx===labels.length-1) return '#333';
+            const d=ctx.dataset.data[idx];
+            return Array.isArray(d)&&(d[1]-d[0])>=0 ? '#C0192A' : '#00A650';
+          }
         },
         tooltip:{callbacks:{
-          label: ctx=>`Desvio: ${ctx.raw>=0?'+':''}${ctx.raw.toFixed(1)}pp vs target de ${(TARGET*100).toFixed(0)}%`
+          label:ctx=>{
+            const d=ctx.raw;
+            if(!Array.isArray(d)) return '';
+            const idx=ctx.dataIndex;
+            if(idx===0) return `Geral: ${fmtPct(d[1]/100)}`;
+            if(idx===labels.length-1) return `Target: ${fmtPct(TARGET)}`;
+            const delta=d[1]-d[0];
+            return `Contribuição: ${delta>=0?'+':''}${delta.toFixed(2)}pp`;
+          }
         }}
       },
       scales:{
-        x:{
-          title:{display:true,text:'Desvio em pp (positivo = acima do target)',font:{size:10}},
-          ticks:{font:{size:10},callback:v=>(v>=0?'+':'')+v+'pp'},
-          grid:{color:'#F5F5F5'},
-          afterDataLimits: scale => {
-            const max = Math.max(Math.abs(scale.min), Math.abs(scale.max));
-            scale.min = -max * 1.15;
-            scale.max =  max * 1.15;
-          }
-        },
-        y:{ticks:{font:{size:10}}}
+        x:{ticks:{font:{size:9},maxRotation:35,minRotation:35}},
+        y:{
+          title:{display:true,text:'% Outlier',font:{size:10}},
+          ticks:{font:{size:10},callback:v=>v.toFixed(1)+'%'},
+          grid:{color:'#F5F5F5'}
+        }
       }
     }
   });
 }
 
-// ── MANAGER RANKING ────────────────────────────────────────────────────────────
+function buildExplodedGroups(field){
+  const exploded=[];
+  DATA.forEach(r=>{
+    const arr=r[field];
+    if(!arr||!arr.length){ exploded.push({key:'(sem dado)',num:r.num,den:r.den}); return; }
+    arr.forEach(k=>exploded.push({key:k,num:r.num/arr.length,den:r.den/arr.length}));
+  });
+  const map={};
+  exploded.forEach(r=>{
+    if(!map[r.key]) map[r.key]={key:r.key,num:0,den:0};
+    map[r.key].num+=r.num; map[r.key].den+=r.den;
+  });
+  return Object.values(map).map(g=>({...g,pct:g.den>0?g.num/g.den:0})).filter(g=>g.den>0);
+}
+
+// ── RANKING RICO (ajuste #6) ──────────────────────────────────────────────────
 function buildManagers(){
   const groupType = document.getElementById('mgr-group')?.value  || 'team';
   const sortType  = document.getElementById('mgr-sort')?.value   || 'pct';
@@ -939,8 +1171,8 @@ function buildManagers(){
   const list      = document.getElementById('manager-list');
   if(!DATA.length){ list.innerHTML='<div class="empty-msg">Carregue os dados.</div>'; return; }
 
-  const keyFn = groupType==='sr_manager' ? r=>r.srmanager :
-                groupType==='team'       ? r=>r.team : r=>r.office;
+  const keyFn = groupType==='canal' ? r=>r.canal :
+                groupType==='team'  ? r=>r.team : r=>r.office;
   let groups = groupBy(DATA, keyFn);
   if(onlyAbove) groups = groups.filter(g=>g.pct>TARGET);
   groups.sort((a,b)=>
@@ -949,44 +1181,137 @@ function buildManagers(){
     b.pct-a.pct
   );
 
-  const maxNum = Math.max(...groups.map(g=>g.num),1);
-  const top    = groups.slice(0,30);
+  const totalOutliers = groups.reduce((s,g)=>s+g.num,0);
+  const maxPct = Math.max(...groups.map(g=>g.pct),0.001);
+
+  // para delta vs período anterior por grupo
+  const gran = document.getElementById('f-gran').value;
+  const prevMap = buildPrevPeriodMap(keyFn, gran);
+
+  const top = groups.slice(0,40);
   list.innerHTML = top.map((g,i)=>{
     const pct    = g.pct;
-    const barW   = Math.round(g.num/maxNum*100);
+    const barW   = Math.round(pct/maxPct*100);
     const rankCls= pct>0.35?'r1': pct>0.20?'r2': pct>TARGET?'r3': 'rok';
     const valCls = pct>0.35?'val-danger': pct>TARGET?'val-warn': 'val-ok';
-    const barCls = pct>0.35?'bar-danger': pct>TARGET?'bar-warn': 'bar-ok';
+    const barCls = pct>0.35?'danger': pct>TARGET?'warn': 'ok';
     const lbl    = g.key.replace('BR_','').replace(/_/g,' ');
-    return `<div class="mgr-row">
-      <div class="mgr-rank ${rankCls}">${i+1}</div>
-      <div class="mgr-name">${lbl.length>30?lbl.substring(0,28)+'…':lbl}</div>
-      <div class="mgr-bar-wrap"><div class="mgr-bar ${barCls}" style="width:${barW}%"></div></div>
-      <div class="mgr-val ${valCls}">${fmtPct(pct)}</div>
-      <div class="mgr-vol">${fmtNum(g.num)}/${fmtNum(g.den)}</div>
+    const share  = totalOutliers>0 ? (g.num/totalOutliers*100).toFixed(1) : '0.0';
+
+    // badge office (só quando groupType=team)
+    const officeBadge = groupType==='team' && g.office ? `<span class="rank-office-badge">${g.office.replace('BR_','').replace(/_/g,' ').substring(0,10)}</span>` : '';
+
+    // delta vs período anterior
+    let deltaPill = '';
+    if(prevMap && prevMap[g.key]!==undefined){
+      const prev = prevMap[g.key];
+      const d = pct - prev;
+      if(Math.abs(d)>=0.001){
+        const cls2 = d>0?'rank-delta-up':'rank-delta-dn';
+        const sign = d>0?'▲ +':'▼ ';
+        deltaPill = `<span class="rank-delta-pill ${cls2}">${sign}${(Math.abs(d)*100).toFixed(1)}pp</span>`;
+      }
+    }
+
+    // top 2 processos/cdus
+    const topProcs = [...g.cdus].slice(0,2);
+    const topTags  = topProcs.map(p=>`<span class="rank-top-tag">${p.length>20?p.substring(0,18)+'…':p}</span>`).join('');
+    const topSection = topTags ? `<div class="rank-top-items">Top CDUs: ${topTags}</div>` : '';
+
+    return `<div class="rank-card">
+      <div class="rank-card-header">
+        <div class="rank-num ${rankCls}">${i+1}</div>
+        <div class="rank-name">${lbl.length>35?lbl.substring(0,33)+'…':lbl}</div>
+        ${officeBadge}
+        <div class="rank-pct-val ${valCls}">${fmtPct(pct)}</div>
+      </div>
+      <div class="rank-card-body">
+        <div class="rank-bar-section">
+          <div class="rank-bar-wrap"><div class="rank-bar ${barCls}" style="width:${barW}%"></div></div>
+          <div class="rank-meta">
+            <span class="rank-vol">${fmtNum(g.num)} outliers / ${fmtNum(g.den)} casos</span>
+            <span class="rank-share">${share}% dos outliers totais</span>
+            ${deltaPill}
+          </div>
+          ${topSection}
+        </div>
+      </div>
     </div>`;
   }).join('') || '<div class="empty-msg">Nenhum segmento encontrado.</div>';
 }
 
-// ── MOM ────────────────────────────────────────────────────────────────────────
+function buildPrevPeriodMap(keyFn, gran){
+  let semRows, allDates, prevDate;
+  if(gran==='SEMANA'){
+    semRows = RAW.filter(r=>r.granularity==='SEMANA');
+    const semDates = [...new Set(semRows.map(r=>r.date))].sort();
+    if(semDates.length<2) return null;
+    prevDate = semDates[semDates.length-2];
+    const f=getFilters();
+    const prevRows=RAW.filter(r=>{
+      if(r.granularity!=='SEMANA'||r.date!==prevDate) return false;
+      if(f.team!=='ALL'&&r.team!==f.team) return false;
+      if(f.office!=='ALL'&&r.office!==f.office) return false;
+      if(f.canal!=='ALL'&&r.canal!==f.canal) return false;
+      if(f.srmanager!=='ALL'&&r.srmanager!==f.srmanager) return false;
+      return true;
+    });
+    const prevG=groupBy(prevRows,keyFn);
+    const m={};
+    prevG.forEach(g=>m[g.key]=g.pct);
+    return m;
+  } else {
+    allDates = [...new Set(RAW.map(r=>r.date))].sort();
+    if(allDates.length<2) return null;
+    prevDate = allDates[allDates.length-2];
+    const f=getFilters();
+    const prevRows=RAW.filter(r=>{
+      if(r.date!==prevDate) return false;
+      if(gran!=='ALL'&&r.granularity!==gran) return false;
+      if(f.team!=='ALL'&&r.team!==f.team) return false;
+      if(f.office!=='ALL'&&r.office!==f.office) return false;
+      if(f.canal!=='ALL'&&r.canal!==f.canal) return false;
+      if(f.srmanager!=='ALL'&&r.srmanager!==f.srmanager) return false;
+      return true;
+    });
+    const prevG=groupBy(prevRows,keyFn);
+    const m={};
+    prevG.forEach(g=>m[g.key]=g.pct);
+    return m;
+  }
+}
+
+// ── MOM (ajuste #7: usa RAW com filtros globais) ───────────────────────────────
 function buildMoM(){
   const groupType = document.getElementById('mom-group')?.value || 'team';
   const sortType  = document.getElementById('mom-sort')?.value  || 'delta_desc';
   const tbody     = document.getElementById('mom-tbody');
   if(!RAW.length){ tbody.innerHTML='<tr><td colspan="7" class="empty-msg">Carregue os dados.</td></tr>'; return; }
 
-  // detecta meses distintos em RAW (não em DATA para evitar problema de filtros não populados)
-  const dates = [...new Set(RAW.map(r=>r.date))].sort();
-  if(dates.length<2){ tbody.innerHTML='<tr><td colspan="7" class="empty-msg">Necessário ao menos 2 meses de dados.</td></tr>'; return; }
+  const gran = document.getElementById('f-gran').value;
+  const f = getFilters();
+
+  // filtra RAW com todos os filtros exceto o de data, respeitando granularidade
+  const filteredRaw = RAW.filter(r=>{
+    if(gran!=='ALL' && r.granularity!==gran) return false;
+    if(f.team!=='ALL'      && r.team!==f.team)          return false;
+    if(f.office!=='ALL'    && r.office!==f.office)       return false;
+    if(f.canal!=='ALL'     && r.canal!==f.canal)         return false;
+    if(f.srmanager!=='ALL' && r.srmanager!==f.srmanager) return false;
+    return true;
+  });
+
+  // detecta curDate e prevDate a partir dos dates distintos em filteredRaw
+  const dates = [...new Set(filteredRaw.map(r=>r.date))].sort();
+  if(dates.length<2){ tbody.innerHTML='<tr><td colspan="7" class="empty-msg">Necessário ao menos 2 períodos de dados.</td></tr>'; return; }
 
   const curDate  = dates[dates.length-1];
   const prevDate = dates[dates.length-2];
 
-  // usa RAW direto para buscar os períodos, sem filtro de UI
-  const curRows  = RAW.filter(r=>r.date===curDate);
-  const prevRows = RAW.filter(r=>r.date===prevDate);
+  const curRows  = filteredRaw.filter(r=>r.date===curDate);
+  const prevRows = filteredRaw.filter(r=>r.date===prevDate);
 
-  const keyFn = groupType==='team'?r=>r.team : groupType==='office'?r=>r.office : r=>r.srmanager;
+  const keyFn = groupType==='team'?r=>r.team : groupType==='office'?r=>r.office : r=>r.canal;
   const curG  = groupBy(curRows,  keyFn);
   const prevG = groupBy(prevRows, keyFn);
   const prevMap = {};
@@ -1009,7 +1334,6 @@ function buildMoM(){
   const curLbl  = (MONTH_LABELS[cm]||cm)+'/'+cy;
   const prevLbl = (MONTH_LABELS[pm]||pm)+'/'+py;
 
-  // update header
   const thCur  = document.getElementById('mom-th-cur');
   const thPrev = document.getElementById('mom-th-prev');
   if(thCur)  thCur.textContent  = `% Outlier ${curLbl}`;
@@ -1034,12 +1358,17 @@ function buildMoM(){
   }).join('');
 }
 
-// ── HELPER: tabela CDU genérica ────────────────────────────────────────────────
-function buildArrayTab(arrField, sortId, searchId, tbodyId, badgeLabel, badgeCls){
+// ── HELPER: tabela CDU genérica + simulação de impacto (ajuste #8) ─────────────
+function buildArrayTab(arrField, sortId, searchId, tbodyId, simContainerId){
   const sort   = document.getElementById(sortId)?.value   || 'outliers';
   const search = (document.getElementById(searchId)?.value||'').toLowerCase();
   const tbody  = document.getElementById(tbodyId);
-  if(!DATA.length){ tbody.innerHTML=`<tr><td colspan="7" class="empty-msg">Carregue os dados.</td></tr>`; return; }
+  if(!DATA.length){
+    tbody.innerHTML=`<tr><td colspan="7" class="empty-msg">Carregue os dados.</td></tr>`;
+    const simEl=document.getElementById(simContainerId);
+    if(simEl) simEl.innerHTML='';
+    return;
+  }
 
   const exploded = [];
   DATA.forEach(r=>{
@@ -1059,6 +1388,8 @@ function buildArrayTab(arrField, sortId, searchId, tbodyId, badgeLabel, badgeCls
   if(search) items=items.filter(i=>i.key.toLowerCase().includes(search));
   items.sort((a,b)=> sort==='pct'?b.pct-a.pct : sort==='total'?b.den-a.den : b.num-a.num);
 
+  const totalNum = DATA.reduce((s,r)=>s+r.num,0);
+  const totalDen = DATA.reduce((s,r)=>s+r.den,0);
   const totalOut = items.reduce((s,i)=>s+i.num,0);
   let cum=0;
 
@@ -1076,26 +1407,85 @@ function buildArrayTab(arrField, sortId, searchId, tbodyId, badgeLabel, badgeCls
       <td class="tr" style="font-weight:700;color:${paretoAcum<=80?'#3483FA':'#888'}">${paretoAcum}%</td>
     </tr>`;
   }).join('');
+
+  // Simulação de impacto — top 5 ofensores (acima do target)
+  const simEl = document.getElementById(simContainerId);
+  if(!simEl) return;
+  const top5 = items.filter(i=>i.pct>TARGET).slice(0,5);
+  if(!top5.length){ simEl.innerHTML=''; return; }
+
+  const curPct = totalDen>0 ? totalNum/totalDen : 0;
+
+  // Cenário 1: Se resolvermos os top 5 (eles atingem o target)
+  let novoNum1 = totalNum;
+  top5.forEach(i=>{ novoNum1 -= i.num; novoNum1 += i.den*TARGET; });
+  const sim1Pct = totalDen>0 ? novoNum1/totalDen : 0;
+  const gain1 = curPct - sim1Pct;
+
+  // Cenário 2: Se retirarmos os top 5
+  let novoNum2 = totalNum, novoDen2 = totalDen;
+  top5.forEach(i=>{ novoNum2 -= i.num; novoDen2 -= i.den; });
+  const sim2Pct = novoDen2>0 ? novoNum2/novoDen2 : 0;
+  const gain2 = curPct - sim2Pct;
+
+  simEl.innerHTML = `
+  <div class="sim-section">
+    <div class="sim-title">🎯 Simulação de Impacto — Top 5 Ofensores</div>
+    <div class="sim-cards">
+      <div class="sim-card">
+        <div class="sim-card-title">Se resolvermos os top 5 (atingem target de ${fmtPct(TARGET)})</div>
+        <div class="sim-vals">
+          <div class="sim-val-block">
+            <div class="sim-val-label">Atual</div>
+            <div class="sim-val-num" style="color:${curPct>TARGET?'#F23D4F':'#00A650'}">${fmtPct(curPct)}</div>
+          </div>
+          <div class="sim-arrow">→</div>
+          <div class="sim-val-block">
+            <div class="sim-val-label">Simulado</div>
+            <div class="sim-val-num" style="color:${sim1Pct>TARGET?'#FF7733':'#00A650'}">${fmtPct(sim1Pct)}</div>
+          </div>
+          <div class="sim-gain">▼ ${(gain1*100).toFixed(2)}pp</div>
+        </div>
+      </div>
+      <div class="sim-card">
+        <div class="sim-card-title">Se retirarmos os top 5 do denominador</div>
+        <div class="sim-vals">
+          <div class="sim-val-block">
+            <div class="sim-val-label">Atual</div>
+            <div class="sim-val-num" style="color:${curPct>TARGET?'#F23D4F':'#00A650'}">${fmtPct(curPct)}</div>
+          </div>
+          <div class="sim-arrow">→</div>
+          <div class="sim-val-block">
+            <div class="sim-val-label">Simulado</div>
+            <div class="sim-val-num" style="color:${sim2Pct>TARGET?'#FF7733':'#00A650'}">${fmtPct(sim2Pct)}</div>
+          </div>
+          <div class="sim-gain">▼ ${(gain2*100).toFixed(2)}pp</div>
+        </div>
+      </div>
+    </div>
+  </div>`;
 }
 
 function buildCDU(){
-  buildArrayTab('cdus','cdu-sort','cdu-search','cdu-tbody','CDU','bdg-cdu');
+  buildArrayTab('cdus','cdu-sort','cdu-search','cdu-tbody','cdu-sim');
 }
 
 function buildSubCDU(){
-  buildArrayTab('subcdus','subcdu-sort','subcdu-search','subcdu-tbody','Sub-CDU','bdg-sub');
+  buildArrayTab('subcdus','subcdu-sort','subcdu-search','subcdu-tbody','subcdu-sim');
 }
 
 function buildSolution(){
-  buildArrayTab('solutions','solution-sort','solution-search','solution-tbody','Solução','bdg-off');
+  buildArrayTab('solutions','solution-sort','solution-search','solution-tbody','solution-sim');
 }
 
-// ── SENIORIDADE ────────────────────────────────────────────────────────────────
+// ── SENIORIDADE (ajuste #9: reescrita clara) ───────────────────────────────────
 function buildSeniority(){
   if(!DATA.length) return;
   const groups = groupBy(DATA, r=>r.seniority).sort((a,b)=>b.pct-a.pct);
+  const totalOutliers = groups.reduce((s,g)=>s+g.num,0);
+  const maxOut = Math.max(...groups.map(g=>g.num),1);
 
-  // gráfico de barras horizontal simples
+  // gráfico de barras horizontal com linha pontilhada no target
   if(senChart) senChart.destroy();
   senChart = new Chart(document.getElementById('sen-chart'),{
     type:'bar',
@@ -1105,9 +1495,7 @@ function buildSeniority(){
         label:'% Outlier',
         data: groups.map(g=>Math.round(g.pct*1000)/10),
         backgroundColor: groups.map(g=>
-          g.pct>0.20 ? 'rgba(242,61,79,.8)' :
-          g.pct>TARGET ? 'rgba(255,119,51,.8)' :
-          'rgba(0,166,80,.7)'
+          g.pct>TARGET ? 'rgba(242,61,79,.8)' : 'rgba(0,166,80,.7)'
         ),
         borderRadius: 4
       }]
@@ -1124,7 +1512,8 @@ function buildSeniority(){
           formatter: v=>v.toFixed(1)+'%',
           font:{size:10,weight:'bold'},
           color:'#555'
-        }
+        },
+        annotation: undefined
       },
       scales:{
         x:{
@@ -1134,31 +1523,62 @@ function buildSeniority(){
         },
         y:{ticks:{font:{size:11}}}
       }
-    }
+    },
+    plugins:[{
+      id:'targetLine',
+      afterDraw(chart){
+        const {ctx,scales:{x,y}}=chart;
+        const xPos=x.getPixelForValue(TARGET*100);
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(xPos,y.top);
+        ctx.lineTo(xPos,y.bottom);
+        ctx.strokeStyle='rgba(52,131,250,.8)';
+        ctx.lineWidth=2;
+        ctx.setLineDash([5,4]);
+        ctx.stroke();
+        ctx.restore();
+        ctx.save();
+        ctx.font='bold 9px sans-serif';
+        ctx.fillStyle='#3483FA';
+        ctx.fillText(`Target ${fmtPct(TARGET)}`,xPos+4,y.top+12);
+        ctx.restore();
+      }
+    }]
   });
 
-  // tabela simples
+  // tabela limpa
   const tbody = document.getElementById('sen-tbody');
-  tbody.innerHTML = groups.map(g=>{
-    const pctCls = g.pct>0.20?'val-neg':g.pct>TARGET?'val-wrn':'val-pos';
+  tbody.innerHTML = groups.map((g,i)=>{
+    const pctCls = g.pct>TARGET?'val-neg':'val-pos';
+    const vsTarget = g.pct>TARGET
+      ? `<span class="sen-pill-above">▲ acima</span>`
+      : `<span class="sen-pill-below">▼ abaixo</span>`;
+    const shareW = totalOutliers>0 ? Math.round(g.num/totalOutliers*100) : 0;
+    const progCls = g.pct>TARGET ? '#F23D4F' : '#00A650';
     return `<tr>
+      <td>${i+1}</td>
       <td>${g.key}</td>
       <td class="tr">${fmtNum(g.den)}</td>
       <td class="tr">${fmtNum(g.num)}</td>
       <td class="tr ${pctCls}">${fmtPct(g.pct)}</td>
+      <td class="tr">${vsTarget}</td>
+      <td class="tr">
+        <span class="sen-prog-wrap"><span class="sen-prog" style="width:${shareW}%;background:${progCls}"></span></span>
+        <span style="font-size:10px;color:#888;margin-left:5px">${shareW}%</span>
+      </td>
     </tr>`;
   }).join('');
 }
 
-// ── CONCENTRAÇÃO ────────────────────────────────────────────────────────────────
+// ── CONCENTRAÇÃO (ajuste #10: sem SR Manager) ─────────────────────────────────
 function buildConcentration(){
   const dim  = document.getElementById('conc-dim')?.value || 'team';
   const wrap = document.getElementById('conc-list');
   if(!DATA.length){ wrap.innerHTML='<div class="empty-msg">Carregue os dados.</div>'; return; }
 
-  const keyFn = dim==='team'      ? r=>r.team      :
-                dim==='office'    ? r=>r.office     :
-                dim==='sr_manager'? r=>r.srmanager  :
+  const keyFn = dim==='team'   ? r=>r.team   :
+                dim==='office' ? r=>r.office  :
                 r=>(r.processes[0]||'(sem processo)');
   const groups = groupBy(DATA, keyFn).sort((a,b)=>b.num-a.num);
   const maxDen = Math.max(...groups.map(g=>g.den),1);
@@ -1197,7 +1617,7 @@ const style2=document.createElement('style');
 style2.textContent=`.val-neg{color:#F23D4F;font-weight:700}.val-wrn{color:#FF7733;font-weight:700}.val-pos{color:#00A650;font-weight:700}`;
 document.head.appendChild(style2);
 
-// ── AUTO-LOAD: carrega data_recontato.js se disponível ────────────────────────
+// ── AUTO-LOAD: carrega data_recontato.js se disponível ───────���────────────────
 window.addEventListener('DOMContentLoaded', () => {
   if (window.RECONTATO_DATA && window.RECONTATO_DATA.length) {
     processImport(window.RECONTATO_DATA);
