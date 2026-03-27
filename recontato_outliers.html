@@ -332,9 +332,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       </div>
       <div class="panel-toolbar">
         <span style="font-size:10px;font-weight:700;color:#888;text-transform:uppercase">Visão</span>
-        <button class="ptbtn active" id="hm-view-equipe" onclick="setHmView('equipe')">Equipe</button>
-        <button class="ptbtn" id="hm-view-office" onclick="setHmView('office')">Office</button>
-        <button class="ptbtn" id="hm-view-canal" onclick="setHmView('canal')">Canal</button>
+        <button class="ptbtn active" id="hm-view-equipe" onclick="setHmView('equipe')">Office</button>
+        <button class="ptbtn" id="hm-view-office" onclick="setHmView('office')">Canal</button>
         <span style="font-size:10px;font-weight:700;color:#888;text-transform:uppercase;margin-left:8px">Mostrar</span>
         <button class="ptbtn active" id="hm-btn-pct" onclick="setHmMode('pct')">% Outlier</button>
         <button class="ptbtn" id="hm-btn-vol" onclick="setHmMode('vol')">Volume</button>
@@ -1016,7 +1015,7 @@ function buildKPIs(){
 // ── HEATMAP (ajuste #2: 3 visões + clique filtra) ─────────────────────────────
 function setHmView(v){
   hmView = v;
-  ['equipe','office','canal'].forEach(x=>{
+  ['equipe','office'].forEach(x=>{
     document.getElementById('hm-view-'+x).classList.toggle('active', x===v);
   });
   buildHeatmap();
