@@ -673,15 +673,15 @@ function populatePeriods(){
   const sel = document.getElementById('f-period');
   const cur = sel.value;
   sel.innerHTML = '';
-  dates.forEach((d,i)=>{
+  dates.forEach(d=>{
     const opt = document.createElement('option');
     opt.value = d;
     opt.textContent = fmtDateLabel(d, gran);
-    if(i===0) opt.selected = true; // mais recente por padrão
     sel.appendChild(opt);
   });
-  // restaura seleção anterior se ainda existir
+  // forçar valor explicitamente após inserir todas as opções
   if(dates.includes(cur)) sel.value = cur;
+  else if(dates.length)   sel.value = dates[0]; // mais recente por padrão
 }
 
 function fmtDateLabel(d, gran){
