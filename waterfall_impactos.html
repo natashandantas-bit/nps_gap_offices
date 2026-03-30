@@ -6,7 +6,7 @@
 <title>Waterfall por NPS Lineal</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
-<script src="data.js?v=20260330b"></script>
+<script src="data.js?v=20260330c"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#EBEBEB;color:#333;font-size:13px}
@@ -944,14 +944,15 @@ function buildDrillAll() {
   const rm5Prev=filterRows(window.NPS_DATA||[],{tipo:'MES',period:momPrev2,office:DRILL.office||'ALL',canal:DRILL.canal||'ALL'});
 
   // Renderiza WoW ou MoM conforme toggle
+  const selectedTeam = team !== 'ALL' ? team : null;
   if(wowMode==='wow') {
-    buildDrillWaterfall(5,'team',r5,r5Prev,null);
+    buildDrillWaterfall(5,'team',r5,r5Prev,selectedTeam);
     buildDrillWaterfall(1,'office',r1,r1Prev,DRILL.office);
     buildDrillWaterfall(2,canalViewKey,r2,r2Prev,DRILL.canal);
     buildDrillWaterfall(3,'processo',r3,r3Prev,DRILL.processo);
     buildDrillWaterfall(4,'cdu',r4,r4Prev,DRILL.cdu);
   } else {
-    buildDrillWaterfall(5,'team',rm5,rm5Prev,null);
+    buildDrillWaterfall(5,'team',rm5,rm5Prev,selectedTeam);
     buildDrillWaterfall(1,'office',rm1,rm1Prev,null);
     buildDrillWaterfall(2,canalViewKey,rm2,rm2Prev,null);
     buildDrillWaterfall(3,'processo',rm3,rm3Prev,null);
