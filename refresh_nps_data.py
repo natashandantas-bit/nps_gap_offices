@@ -26,7 +26,6 @@ WITH BASE_NPS_Y20_DETAIL AS (
     NP.USER_TEAM_ID,
     NP.USER_TEAM_NAME,
     IF(NP.USER_TEAM_ID = 2352, 'C2C', NP.USER_TEAM_CHANNEL) AS USER_TEAM_CHANNEL,
-    NP.SURVEY_CHANNEL,
     NP.USER_OFFICE,
     NP.PRO_PROCESS_NAME,
     NP.CDU,
@@ -67,7 +66,6 @@ QUERY_OFFICE = BASE_CTE + """
 SELECT
   NP.USER_TEAM_NAME,
   NP.USER_TEAM_CHANNEL,
-  NP.SURVEY_CHANNEL,
   NP.USER_OFFICE,
   FORMAT_DATE('%Y-%m-%d', DATE_TRUNC(NP.RES_END_DATE, MONTH))   AS PERIODO,
   'MES'                                                           AS TIPO,
@@ -77,14 +75,13 @@ SELECT
         / NULLIF(COUNT(*), 0), 2)                                AS NPS,
   ROUND(AVG(NP.SURVEY_TARGET_VALUE) * 100, 2)                   AS TARGET
 FROM BASE_NPS_Y20_DETAIL NP
-GROUP BY 1, 2, 3, 4, 5, 6
+GROUP BY 1, 2, 3, 4, 5
 
 UNION ALL
 
 SELECT
   NP.USER_TEAM_NAME,
   NP.USER_TEAM_CHANNEL,
-  NP.SURVEY_CHANNEL,
   NP.USER_OFFICE,
   FORMAT_DATE('%Y-%m-%d', DATE_TRUNC(NP.RES_END_DATE, ISOWEEK)) AS PERIODO,
   'SEMANA'                                                        AS TIPO,
@@ -95,7 +92,7 @@ SELECT
   ROUND(AVG(NP.SURVEY_TARGET_VALUE) * 100, 2)                   AS TARGET
 FROM BASE_NPS_Y20_DETAIL NP
 WHERE DATE_TRUNC(NP.RES_END_DATE, ISOWEEK) >= DATE_SUB(CURRENT_DATE(), INTERVAL 3 WEEK)
-GROUP BY 1, 2, 3, 4, 5, 6
+GROUP BY 1, 2, 3, 4, 5
 
 ORDER BY 1, 2, 3, 4
 """
@@ -461,12 +458,11 @@ def main():
     rows_office = run_query(client, "Query 1/5: por office", QUERY_OFFICE)
     office_data = [
         {
-            "team":       r.USER_TEAM_NAME,
-            "ch":         r.USER_TEAM_CHANNEL,
-            "survey_ch":  r.SURVEY_CHANNEL if r.SURVEY_CHANNEL is not None else "",
-            "office":     r.USER_OFFICE,
-            "period":     str(r.PERIODO),
-            "tipo":       r.TIPO,
+            "team":    r.USER_TEAM_NAME,
+            "ch":      r.USER_TEAM_CHANNEL,
+            "office":  r.USER_OFFICE,
+            "period":  str(r.PERIODO),
+            "tipo":    r.TIPO,
             "enc":     int(r.ENCUESTAS),
             "gap_tgt": float(r.GAP_TGT) if r.GAP_TGT is not None else None,
             "nps":     float(r.NPS)      if r.NPS      is not None else None,
