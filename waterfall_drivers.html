@@ -755,21 +755,26 @@ function buildDrillAll() {
     if(btn) btn.style.display=v?'':'none';
   });
 
-  // 1. Por Driver — peso fixo do baseline
-  buildDrillWaterfall(1, 'driver', filterRows(data,{driver:null,equipe:null}), DRILL.driver, null, driverBaselineWeight);
+  // Filtros globais (dropdowns) como fallback quando DRILL não está ativo
+  const gDrv = F.driver  !=='ALL' ? F.driver  : null;
+  const gEq  = F.equipe  !=='ALL' ? F.equipe  : null;
 
-  // 2. Por Equipe (CX_TEAM_NAME) — filtrado por driver
-  const r2=filterRows(data,{driver:DRILL.driver||null,equipe:null});
+  // 1. Por Driver — respeita filtro global de Equipe; mostra todos os drivers (ou o selecionado via DRILL)
+  buildDrillWaterfall(1, 'driver', filterRows(data,{driver:null, equipe:gEq}), DRILL.driver, null, driverBaselineWeight);
+
+  // 2. Por Equipe — filtrado por DRILL.driver ou filtro global de Driver
+  const r2=filterRows(data,{driver:DRILL.driver||gDrv, equipe:null});
   const lbl2=document.getElementById('drill-dim-label-2');
-  if(lbl2) lbl2.textContent=DRILL.driver?`Equipes de "${DRILL.driver.slice(0,22)}"`:'Por Equipe';
+  const drvLabel=DRILL.driver||gDrv;
+  if(lbl2) lbl2.textContent=drvLabel?`Equipes de "${drvLabel.slice(0,22)}"`:'Por Equipe';
   buildDrillWaterfall(2, 'team', r2, DRILL.equipe);
 
-  // 3. Por Office — filtrado por driver + equipe
-  const r3=filterRows(data,{driver:DRILL.driver||null,equipe:DRILL.equipe||null});
+  // 3. Por Office — filtrado por driver + equipe (DRILL ou global)
+  const r3=filterRows(data,{driver:DRILL.driver||gDrv, equipe:DRILL.equipe||gEq});
   buildDrillWaterfall(3, 'office', r3, DRILL.office);
 
   // 4. Por Canal — filtrado por driver + equipe + office
-  const r4=filterRows(data,{driver:DRILL.driver||null,equipe:DRILL.equipe||null,office:DRILL.office||'ALL'});
+  const r4=filterRows(data,{driver:DRILL.driver||gDrv, equipe:DRILL.equipe||gEq, office:DRILL.office||'ALL'});
   buildDrillWaterfall(4, 'ch', r4, DRILL.canal, k=>CH_LABEL[k]||k);
 
   buildSimulation();
