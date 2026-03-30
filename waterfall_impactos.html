@@ -326,7 +326,11 @@ tr:hover td{background:#FAFAFA}
       <div class="drill-card">
         <div class="drill-card-hdr">
           <span class="drill-card-num">3</span>
-          <span class="drill-card-dim" id="drill-dim-label-2">Por Canal</span>
+          <span class="drill-card-dim" id="drill-dim-label-2">Por Canal (User)</span>
+          <div style="display:flex;gap:3px;margin-left:6px">
+            <button id="canal-user-btn" onclick="setCanalView('ch')" style="font-size:9px;padding:2px 7px;border-radius:10px;border:1px solid #3483FA;background:#3483FA;color:#fff;cursor:pointer;font-weight:700">User</button>
+            <button id="canal-survey-btn" onclick="setCanalView('survey_ch')" style="font-size:9px;padding:2px 7px;border-radius:10px;border:1px solid #3483FA;background:#fff;color:#3483FA;cursor:pointer;font-weight:700">Survey</button>
+          </div>
           <button class="drill-reset-btn" id="drill-reset-2" onclick="drillReset(2)" style="display:none">× limpar</button>
         </div>
         <div class="drill-canvas-wrap" id="drill-canvas-2"></div>
@@ -432,6 +436,7 @@ let drillCharts = [null, null, null, null, null];
 let tgtCharts   = [null, null, null, null, null];
 let momCharts   = [null, null, null, null, null];
 let wowMode     = 'wow'; // 'wow' | 'mom'
+let canalViewKey = 'ch'; // 'ch' = Canal User | 'survey_ch' = Canal Survey
 
 function setWowMode(mode) {
   wowMode = mode;
@@ -441,6 +446,16 @@ function setWowMode(mode) {
   document.getElementById('mom-btn').style.color       = mode==='mom'?'#fff':'#3483FA';
   document.getElementById('wow-mode-label').textContent = mode==='wow'
     ? 'Semana vs Semana Anterior' : 'Mês vs Mês Anterior';
+  buildDrillAll();
+}
+function setCanalView(key) {
+  canalViewKey = key;
+  DRILL.canal = null; // reset canal selection when switching view
+  document.getElementById('canal-user-btn').style.background  = key==='ch'?'#3483FA':'#fff';
+  document.getElementById('canal-user-btn').style.color       = key==='ch'?'#fff':'#3483FA';
+  document.getElementById('canal-survey-btn').style.background = key==='survey_ch'?'#3483FA':'#fff';
+  document.getElementById('canal-survey-btn').style.color      = key==='survey_ch'?'#fff':'#3483FA';
+  document.getElementById('drill-dim-label-2').textContent = key==='ch' ? 'Por Canal (User)' : 'Por Canal (Survey)';
   buildDrillAll();
 }
 let wfChartInst = null; // compat
@@ -932,20 +947,20 @@ function buildDrillAll() {
   if(wowMode==='wow') {
     buildDrillWaterfall(5,'team',r5,r5Prev,null);
     buildDrillWaterfall(1,'office',r1,r1Prev,DRILL.office);
-    buildDrillWaterfall(2,'ch',r2,r2Prev,DRILL.canal);
+    buildDrillWaterfall(2,canalViewKey,r2,r2Prev,DRILL.canal);
     buildDrillWaterfall(3,'processo',r3,r3Prev,DRILL.processo);
     buildDrillWaterfall(4,'cdu',r4,r4Prev,DRILL.cdu);
   } else {
     buildDrillWaterfall(5,'team',rm5,rm5Prev,null);
     buildDrillWaterfall(1,'office',rm1,rm1Prev,null);
-    buildDrillWaterfall(2,'ch',rm2,rm2Prev,null);
+    buildDrillWaterfall(2,canalViewKey,rm2,rm2Prev,null);
     buildDrillWaterfall(3,'processo',rm3,rm3Prev,null);
     buildDrillWaterfall(4,'cdu',rm4,rm4Prev,null);
   }
 
   // TGT charts (vs Target) — sempre usa dados semanais atuais
   buildTgtWaterfall(1,'office',r1);
-  buildTgtWaterfall(2,'ch',r2);
+  buildTgtWaterfall(2,canalViewKey,r2);
   buildTgtWaterfall(3,'processo',r3);
   buildTgtWaterfall(4,'cdu',r4);
   buildTgtWaterfall(5,'team',filterRows(window.NPS_DATA||[],{office:DRILL.office||'ALL',canal:DRILL.canal||'ALL'}));
@@ -958,6 +973,10 @@ function drillSelect(level, key) {
   if(level===2){ const toggle=DRILL.canal===key;  DRILL.canal=toggle?null:key;  DRILL.processo=null; DRILL.cdu=null; }
   if(level===3){ const toggle=DRILL.processo===key; DRILL.processo=toggle?null:key; DRILL.cdu=null; }
   if(level===4){ const toggle=DRILL.cdu===key; DRILL.cdu=toggle?null:key; }
+  if(level===5){
+    const sel=document.getElementById('wf-team');
+    if(sel){ const toggle=sel.value===key; sel.value=toggle?'ALL':key; }
+  }
   buildDrillAll();
 }
 
@@ -1090,6 +1109,7 @@ function buildSimulation() {
           <th style="width:70px;font-size:9px;font-weight:700;color:#aaa;padding:4px;text-align:right;text-transform:uppercase">GAP</th>
           <th style="width:80px;font-size:9px;font-weight:700;color:#aaa;padding:4px;text-align:right;text-transform:uppercase">Ganho est.</th>
           <th style="width:120px;font-size:9px;font-weight:700;color:#aaa;padding:4px;text-transform:uppercase">Progresso</th>
+          <th style="width:58px;font-size:9px;font-weight:700;color:#3483FA;padding:4px;text-align:right;text-transform:uppercase">% Rep</th>
         </tr></thead>
         <tbody>${rowsHtml}</tbody>
       </table>
