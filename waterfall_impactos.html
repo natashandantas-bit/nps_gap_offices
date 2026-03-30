@@ -65,7 +65,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .drill-breadcrumb{padding:8px 22px;font-size:11px;color:#888;background:#FAFAFA;border-bottom:1px solid #F0F0F0;display:flex;gap:4px;align-items:center;flex-wrap:wrap}
 .drill-bc-item{color:#aaa}.drill-bc-item.active{color:#222;font-weight:700}
 .drill-bc-arrow{color:#ddd;margin:0 2px;font-size:10px}
-.drill-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:#F0F0F0}
+.drill-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:#F0F0F0}
 .drill-card{background:#fff;padding:14px 16px 18px}
 .drill-card-hdr{display:flex;align-items:center;gap:6px;margin-bottom:8px}
 .drill-card-num{width:20px;height:20px;border-radius:50%;background:#222;color:#FFE600;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
@@ -454,7 +454,7 @@ let wfChartInst = null; // compat
 let activeTab   = 'office';
 
 // ── LABELS ────────────────────────────────────────────────────────────────
-const CH_LABEL  = { 'MULTICANAL C2C':'C2C', 'MULTICANAL CHAT':'Chat', 'OFFLINE':'Offline' };
+const CH_LABEL  = { 'MULTICANAL C2C':'Multicanal C2C', 'MULTICANAL CHAT':'Multicanal Chat', 'OFFLINE':'Offline', 'C2C':'C2C' };
 const CH_CLASS  = { 'MULTICANAL C2C':'cht-c2c', 'MULTICANAL CHAT':'cht-chat', 'OFFLINE':'cht-off' };
 const TEAM_LABEL = {
   'BR_Buyers_Pre_Entrega' :'Pré-Entrega',
@@ -1018,6 +1018,9 @@ function buildSimulation() {
           <span style="font-size:13px;font-weight:800;color:${isPos?'#00875A':'#888'}">${isPos?'+':''}${delta.toFixed(2)} pp</span>
         </td>
         <td style="width:65px;text-align:right;font-size:10px;color:#aaa;padding:6px">${volPct.toFixed(1)}% vol</td>
+        <td style="width:60px;text-align:right;font-size:10px;padding:6px">
+          <span style="background:#F0F4FF;color:#3483FA;font-weight:700;padding:2px 6px;border-radius:10px">${(sg.weight*100).toFixed(1)}%</span>
+        </td>
       </tr>`;
     }).join('');
     summaryHtml=`<div style="margin-top:10px;padding:8px 12px;background:#EBF3FF;border-radius:6px;font-size:11px;color:#1D4ED8;font-weight:600">
@@ -1033,6 +1036,7 @@ function buildSimulation() {
           <th style="width:90px;font-size:9px;font-weight:700;color:#aaa;padding:4px;text-align:right;text-transform:uppercase">NPS sem ele</th>
           <th style="width:80px;font-size:9px;font-weight:700;color:#aaa;padding:4px;text-align:right;text-transform:uppercase">Δ NPS</th>
           <th style="width:65px;font-size:9px;font-weight:700;color:#aaa;padding:4px;text-align:right;text-transform:uppercase">% Vol</th>
+          <th style="width:60px;font-size:9px;font-weight:700;color:#3483FA;padding:4px;text-align:right;text-transform:uppercase">% Rep</th>
         </tr></thead>
         <tbody>${rowsHtml}</tbody>
       </table>${summaryHtml}`;
@@ -1060,6 +1064,9 @@ function buildSimulation() {
             <div style="background:linear-gradient(90deg,#00A650,#00C060);height:100%;width:${barPct}%;border-radius:3px;transition:width .3s"></div>
           </div>
         </td>
+        <td style="width:60px;text-align:right;font-size:10px;padding:6px 8px">
+          <span style="background:#F0F4FF;color:#3483FA;font-weight:700;padding:2px 6px;border-radius:10px">${(sg.weight*100).toFixed(1)}%</span>
+        </td>
       </tr>`;
     }).join('');
     document.getElementById('sim-table-wrap').innerHTML=`
@@ -1071,6 +1078,7 @@ function buildSimulation() {
           <th style="width:70px;font-size:9px;font-weight:700;color:#aaa;padding:4px;text-align:right;text-transform:uppercase">GAP</th>
           <th style="width:80px;font-size:9px;font-weight:700;color:#aaa;padding:4px;text-align:right;text-transform:uppercase">Ganho est.</th>
           <th style="width:120px;font-size:9px;font-weight:700;color:#aaa;padding:4px;text-transform:uppercase">Progresso</th>
+          <th style="width:60px;font-size:9px;font-weight:700;color:#3483FA;padding:4px;text-align:right;text-transform:uppercase">% Rep</th>
         </tr></thead>
         <tbody>${rowsHtml}</tbody>
       </table>
@@ -1253,17 +1261,17 @@ function buildProcesso() {
     <span class="sf-lbl">Filtrar:</span>
     <div class="fg"><label>Equipe</label>
       <select class="sfsel" id="proc-f-team" onchange="buildProcesso()">
-        <option value="ALL">Todos</option>
-        <option value="BR_Buyers_Pre_Entrega">Pré-Entrega</option>
-        <option value="BR_Buyers_Post_Entrega">Pós-Entrega</option>
-        <option value="BR_Buyers_Compra">Compra</option>
+        <option value="ALL" ${teamFilter==='ALL'?'selected':''}>Todos</option>
+        <option value="BR_Buyers_Pre_Entrega" ${teamFilter==='BR_Buyers_Pre_Entrega'?'selected':''}>Pré-Entrega</option>
+        <option value="BR_Buyers_Post_Entrega" ${teamFilter==='BR_Buyers_Post_Entrega'?'selected':''}>Pós-Entrega</option>
+        <option value="BR_Buyers_Compra" ${teamFilter==='BR_Buyers_Compra'?'selected':''}>Compra</option>
       </select></div>
     <div class="fg"><label>Canal</label>
       <select class="sfsel" id="proc-f-canal" onchange="buildProcesso()">
-        <option value="ALL">Todos</option>
-        <option value="MULTICANAL C2C">C2C</option>
-        <option value="MULTICANAL CHAT">Chat</option>
-        <option value="OFFLINE">Offline</option>
+        <option value="ALL" ${canalFilter==='ALL'?'selected':''}>Todos</option>
+        <option value="MULTICANAL C2C" ${canalFilter==='MULTICANAL C2C'?'selected':''}>C2C</option>
+        <option value="MULTICANAL CHAT" ${canalFilter==='MULTICANAL CHAT'?'selected':''}>Chat</option>
+        <option value="OFFLINE" ${canalFilter==='OFFLINE'?'selected':''}>Offline</option>
       </select></div>
   </div>`;
 
