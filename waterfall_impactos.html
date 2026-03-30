@@ -6,7 +6,7 @@
 <title>Waterfall por NPS Lineal</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
-<script src="data.js?v=20260330c"></script>
+<script src="data.js?v=20260330d"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#EBEBEB;color:#333;font-size:13px}
@@ -682,8 +682,8 @@ function buildDrillWaterfall(level, dimKey, rows, prevRows, selectedKey, prefix=
     const isNeg=s.wowC<0;
     const isOther=!!s.isOther;
     const alpha=selectedKey&&!isSelected?0.25:0.85;
-    const fullLbl=dimKey==='ch'?(CH_LABEL[s.key]||s.key):s.key;
-    const lbl=dimKey==='ch'?fullLbl:(s.key.length>16?s.key.slice(0,14)+'…':s.key);
+    const fullLbl=dimKey==='ch'?(CH_LABEL[s.key]||s.key):dimKey==='team'?(TEAM_LABEL[s.key]||s.key):s.key;
+    const lbl=dimKey==='ch'?fullLbl:dimKey==='team'?fullLbl:(s.key.length>16?s.key.slice(0,14)+'…':s.key);
     labels.push(lbl);
     fullLabels.push(fullLbl);
     const start=running;
@@ -725,6 +725,12 @@ function buildDrillWaterfall(level, dimKey, rows, prevRows, selectedKey, prefix=
         const clicked=_segs[idx-1];
         if(clicked&&!clicked.isOther) drillSelect(level,clicked.key);
       },
+      onHover:(evt,elements)=>{
+        if(!evt.native)return;
+        const idx=elements.length?elements[0].index:-1;
+        const clickable=idx>0&&idx<labels.length-1&&_segs[idx-1]&&!_segs[idx-1].isOther;
+        evt.native.target.style.cursor=clickable?'pointer':'default';
+      },
       plugins:{
         legend:{display:false},
         datalabels:{
@@ -758,7 +764,7 @@ function buildDrillWaterfall(level, dimKey, rows, prevRows, selectedKey, prefix=
   });
 }
 
-function buildTgtWaterfall(level, dimKey, rows) {
+function buildTgtWaterfall(level, dimKey, rows, selectedKey=null) {
   const wrap=document.getElementById('tgt-canvas-'+level);
   if(!wrap) return;
 
@@ -803,18 +809,23 @@ function buildTgtWaterfall(level, dimKey, rows) {
   const dlLabels=[target.toFixed(1)+'%'];
   const dlColors=['#555'];
 
+  const fullLabels=['Target'];
   let running=target;
   segs.forEach(s=>{
     const isNeg=s.contribution<0;
     const isOther=!!s.isOther;
+    const isSelected=selectedKey&&s.key===selectedKey;
+    const alpha=selectedKey&&!isSelected?0.25:0.85;
     const contrib=parseFloat(s.contribution.toFixed(2));
-    const lbl=dimKey==='ch'?(CH_LABEL[s.key]||s.key):(s.key.length>16?s.key.slice(0,14)+'…':s.key);
+    const fullLbl=dimKey==='ch'?(CH_LABEL[s.key]||s.key):dimKey==='team'?(TEAM_LABEL[s.key]||s.key):s.key;
+    const lbl=dimKey==='ch'?fullLbl:dimKey==='team'?fullLbl:(s.key.length>16?s.key.slice(0,14)+'…':s.key);
     labels.push(lbl);
+    fullLabels.push(fullLbl);
     const start=running;
     running=parseFloat((running+contrib).toFixed(2));
     const lo=Math.min(start,running), hi=Math.max(start,running);
     barsData.push([parseFloat(lo.toFixed(2)),parseFloat(hi.toFixed(2))]);
-    colors.push(isOther?'rgba(180,180,180,0.85)':isNeg?'rgba(242,61,79,0.85)':'rgba(0,166,80,0.85)');
+    colors.push(isSelected?'rgba(255,193,7,0.95)':isOther?`rgba(180,180,180,${alpha})`:isNeg?`rgba(242,61,79,${alpha})`:`rgba(0,166,80,${alpha})`);
     dlLabels.push((contrib>=0?'+':'')+contrib.toFixed(1)+' pp');
     dlColors.push(isOther?'#888':isNeg?'#c0392b':'#1a7a3b');
   });
@@ -829,12 +840,26 @@ function buildTgtWaterfall(level, dimKey, rows) {
   if(tgtCharts[level-1]){try{tgtCharts[level-1].destroy();}catch(e){}}
   const ctx=document.getElementById('tgt-chart-'+level).getContext('2d');
   const _segs=segs;
+  const _fullLabels=fullLabels;
   tgtCharts[level-1]=new Chart(ctx,{
     type:'bar',
     data:{labels,datasets:[{data:barsData,backgroundColor:colors,borderWidth:0,borderRadius:3,borderSkipped:false}]},
     options:{
       responsive:true,maintainAspectRatio:false,
       layout:{padding:{top:22}},
+      onClick:(evt,elements)=>{
+        if(!elements.length)return;
+        const idx=elements[0].index;
+        if(idx===0||idx===labels.length-1)return;
+        const clicked=_segs[idx-1];
+        if(clicked&&!clicked.isOther) drillSelect(level,clicked.key);
+      },
+      onHover:(evt,elements)=>{
+        if(!evt.native)return;
+        const idx=elements.length?elements[0].index:-1;
+        const clickable=idx>0&&idx<labels.length-1&&_segs[idx-1]&&!_segs[idx-1].isOther;
+        evt.native.target.style.cursor=clickable?'pointer':'default';
+      },
       plugins:{
         legend:{display:false},
         datalabels:{
@@ -844,7 +869,13 @@ function buildTgtWaterfall(level, dimKey, rows) {
           font:{weight:700,size:9},
           anchor:'end',align:'end',offset:1,clamp:false,
         },
-        tooltip:{callbacks:{label:c=>{
+        tooltip:{callbacks:{
+          title:c=>{
+            const i=c[0].dataIndex;
+            if(i===0||i===labels.length-1) return labels[i];
+            return _fullLabels[i]||labels[i];
+          },
+          label:c=>{
           const i=c.dataIndex;
           if(i===0) return ` Target: ${target.toFixed(1)}%`;
           if(i===labels.length-1) return ` NPS Atual: ${npsAtual.toFixed(1)}% | GAP: ${(npsAtual-target>=0?'+':'')+(npsAtual-target).toFixed(1)} pp`;
@@ -964,7 +995,7 @@ function buildDrillAll() {
   buildTgtWaterfall(2,canalViewKey,r2);
   buildTgtWaterfall(3,'processo',r3);
   buildTgtWaterfall(4,'cdu',r4);
-  buildTgtWaterfall(5,'team',filterRows(window.NPS_DATA||[],{office:DRILL.office||'ALL',canal:DRILL.canal||'ALL'}));
+  buildTgtWaterfall(5,'team',filterRows(window.NPS_DATA||[],{office:DRILL.office||'ALL',canal:DRILL.canal||'ALL'}),selectedTeam);
 
   buildSimulation();
 }
