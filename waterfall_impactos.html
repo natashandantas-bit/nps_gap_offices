@@ -528,13 +528,21 @@ function populateFilters() {
   const periods = latestPeriods(data,'SEMANA');
   const sel = document.getElementById('f-period');
   sel.innerHTML='';
+  // Detecta semana incompleta: se semana mais recente tem < 30% do volume da anterior, usa a anterior
+  let defaultIdx=0;
+  if(periods.length>=2){
+    const enc0=data.filter(r=>r.tipo==='SEMANA'&&r.period===periods[0]).reduce((s,r)=>s+(r.enc||0),0);
+    const enc1=data.filter(r=>r.tipo==='SEMANA'&&r.period===periods[1]).reduce((s,r)=>s+(r.enc||0),0);
+    if(enc1>0 && enc0/enc1<0.30) defaultIdx=1;
+  }
   periods.slice(0,8).forEach((p,i)=>{
     const o=document.createElement('option');
-    o.value=p; o.text=fmtPeriod(p)+(i===0?' (última)':'');
-    if(i===0) o.selected=true;
+    const isDefault=i===defaultIdx;
+    o.value=p; o.text=fmtPeriod(p)+(i===0&&defaultIdx===0?' (última)':i===defaultIdx&&defaultIdx>0?' (última completa)':'');
+    if(isDefault) o.selected=true;
     sel.appendChild(o);
   });
-  F.period=periods[0]||null;
+  F.period=periods[defaultIdx]||null;
 
   const offices=[...new Set(data.map(r=>r.office).filter(Boolean))].sort();
   const offSel=document.getElementById('f-office');
@@ -1026,6 +1034,7 @@ function buildSimulation() {
           <span style="font-size:13px;font-weight:800;color:${isPos?'#00875A':'#888'}">${isPos?'+':''}${delta.toFixed(2)} pp</span>
         </td>
         <td style="width:65px;text-align:right;font-size:10px;color:#aaa;padding:6px">${volPct.toFixed(1)}% vol</td>
+        <td style="width:58px;text-align:right;padding:6px"><span style="background:#F0F4FF;color:#3483FA;font-weight:700;font-size:10px;padding:2px 6px;border-radius:10px">${(sg.weight*100).toFixed(1)}%</span></td>
       </tr>`;
     }).join('');
     summaryHtml=`<div style="margin-top:10px;padding:8px 12px;background:#EBF3FF;border-radius:6px;font-size:11px;color:#1D4ED8;font-weight:600">
@@ -1041,6 +1050,7 @@ function buildSimulation() {
           <th style="width:90px;font-size:9px;font-weight:700;color:#aaa;padding:4px;text-align:right;text-transform:uppercase">NPS sem ele</th>
           <th style="width:80px;font-size:9px;font-weight:700;color:#aaa;padding:4px;text-align:right;text-transform:uppercase">Δ NPS</th>
           <th style="width:65px;font-size:9px;font-weight:700;color:#aaa;padding:4px;text-align:right;text-transform:uppercase">% Vol</th>
+          <th style="width:58px;font-size:9px;font-weight:700;color:#3483FA;padding:4px;text-align:right;text-transform:uppercase">% Rep</th>
         </tr></thead>
         <tbody>${rowsHtml}</tbody>
       </table>${summaryHtml}`;
@@ -1068,6 +1078,7 @@ function buildSimulation() {
             <div style="background:linear-gradient(90deg,#00A650,#00C060);height:100%;width:${barPct}%;border-radius:3px;transition:width .3s"></div>
           </div>
         </td>
+        <td style="width:58px;text-align:right;padding:6px 8px"><span style="background:#F0F4FF;color:#3483FA;font-weight:700;font-size:10px;padding:2px 6px;border-radius:10px">${(sg.weight*100).toFixed(1)}%</span></td>
       </tr>`;
     }).join('');
     document.getElementById('sim-table-wrap').innerHTML=`
