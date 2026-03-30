@@ -370,12 +370,15 @@ function switchView(view) {
 
 // ── HELPERS ────────────────────────────────────────────────────────────────
 function filterRows(data, ov={}) {
-  const tipo   = ov.tipo   !== undefined ? ov.tipo   : F.tipo;
-  const period = ov.period !== undefined ? ov.period : F.period;
-  const office = ov.office !== undefined ? ov.office : (document.getElementById('wf-office')?.value||'ALL');
-  const canal  = ov.canal  !== undefined ? ov.canal  : 'ALL';
-  const driver = ov.driver !== undefined ? ov.driver : null;
-  const equipe = ov.equipe !== undefined ? ov.equipe : null;
+  const tipo   = ov.hasOwnProperty('tipo')   ? ov.tipo   : F.tipo;
+  const period = ov.hasOwnProperty('period') ? ov.period : F.period;
+  const office = ov.hasOwnProperty('office') ? ov.office : (document.getElementById('wf-office')?.value||'ALL');
+  const canal  = ov.hasOwnProperty('canal')  ? ov.canal  : 'ALL';
+  // Para driver/equipe: DRILL sobrescreve → global F sobrescreve → null (sem filtro)
+  const driver = ov.hasOwnProperty('driver') ? ov.driver
+               : (DRILL.driver || (F.driver !== 'ALL' ? F.driver : null));
+  const equipe = ov.hasOwnProperty('equipe') ? ov.equipe
+               : (DRILL.equipe || (F.equipe !== 'ALL' ? F.equipe : null));
 
   return data.filter(r => {
     if (tipo   && r.tipo   !== tipo)                                        return false;
@@ -755,27 +758,21 @@ function buildDrillAll() {
     if(btn) btn.style.display=v?'':'none';
   });
 
-  // Filtros globais (dropdowns) como fallback quando DRILL não está ativo
-  const gDrv = F.driver  !=='ALL' ? F.driver  : null;
-  const gEq  = F.equipe  !=='ALL' ? F.equipe  : null;
+  // Chart 1 — Por Driver: sem filtro de driver (mostra todos), equipe via DRILL/global
+  buildDrillWaterfall(1, 'driver', filterRows(data, {driver: null}), DRILL.driver, null, driverBaselineWeight);
 
-  // 1. Por Driver — respeita filtro global de Equipe; mostra todos os drivers (ou o selecionado via DRILL)
-  buildDrillWaterfall(1, 'driver', filterRows(data,{driver:null, equipe:gEq}), DRILL.driver, null, driverBaselineWeight);
-
-  // 2. Por Equipe — filtrado por DRILL.driver ou filtro global de Driver
-  const r2=filterRows(data,{driver:DRILL.driver||gDrv, equipe:null});
-  const lbl2=document.getElementById('drill-dim-label-2');
-  const drvLabel=DRILL.driver||gDrv;
-  if(lbl2) lbl2.textContent=drvLabel?`Equipes de "${drvLabel.slice(0,22)}"`:'Por Equipe';
+  // Chart 2 — Por Equipe: sem filtro de equipe (mostra todas), driver via DRILL/global
+  const r2 = filterRows(data, {equipe: null});
+  const lbl2 = document.getElementById('drill-dim-label-2');
+  const drvLabel = DRILL.driver || (F.driver !== 'ALL' ? F.driver : null);
+  if(lbl2) lbl2.textContent = drvLabel ? `Equipes de "${drvLabel.slice(0,22)}"` : 'Por Equipe';
   buildDrillWaterfall(2, 'team', r2, DRILL.equipe);
 
-  // 3. Por Office — filtrado por driver + equipe (DRILL ou global)
-  const r3=filterRows(data,{driver:DRILL.driver||gDrv, equipe:DRILL.equipe||gEq});
-  buildDrillWaterfall(3, 'office', r3, DRILL.office);
+  // Chart 3 — Por Office: driver + equipe via DRILL/global
+  buildDrillWaterfall(3, 'office', filterRows(data, {}), DRILL.office);
 
-  // 4. Por Canal — filtrado por driver + equipe + office
-  const r4=filterRows(data,{driver:DRILL.driver||gDrv, equipe:DRILL.equipe||gEq, office:DRILL.office||'ALL'});
-  buildDrillWaterfall(4, 'ch', r4, DRILL.canal, k=>CH_LABEL[k]||k);
+  // Chart 4 — Por Canal: driver + equipe + office via DRILL/global
+  buildDrillWaterfall(4, 'ch', filterRows(data, {office: DRILL.office||'ALL'}), DRILL.canal, k=>CH_LABEL[k]||k);
 
   buildSimulation();
 }
@@ -864,13 +861,18 @@ function buildSimulation() {
     rowsHtml=negSegs.map((sg,i)=>{
       const gain=gains[i]; cumGain+=gain;
       const barPct=Math.round((gain/Math.max(maxGain,0.001))*100);
+      const reprPct = dim==='driver' ? (cfg().baseline[sg.key]??null) : null;
+      const reprCell = reprPct!=null
+        ? `<span style="font-weight:800;color:#6366F1">${reprPct.toFixed(2)}%</span>`
+        : `<span style="color:#ccc">—</span>`;
       return `<tr style="border-bottom:1px solid #F5F5F5">
         <td style="width:24px;font-size:11px;font-weight:700;color:#bbb;padding:6px 4px">${i+1}</td>
-        <td style="font-size:11px;padding:6px 8px;max-width:220px"><div style="font-weight:600;color:#333;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${sg.key}">${sg.key}</div>
+        <td style="font-size:11px;padding:6px 8px;max-width:200px"><div style="font-weight:600;color:#333;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${sg.key}">${sg.key}</div>
           <div style="font-size:10px;color:#999;margin-top:1px">${fmtEnc(sg.enc)} enc</div></td>
+        <td style="width:60px;text-align:right;font-size:11px;font-weight:700;color:#6366F1;padding:6px">${reprCell}</td>
         <td style="width:70px;text-align:right;font-size:11px;font-weight:700;color:#F23D4F;padding:6px">${fmtGap(sg.gap)} pp</td>
         <td style="width:80px;text-align:right;padding:6px"><span style="font-size:12px;font-weight:800;color:#00875A">+${gain.toFixed(1)} pp</span></td>
-        <td style="width:120px;padding:6px 8px">
+        <td style="width:110px;padding:6px 8px">
           <div style="font-size:9px;color:#999;margin-bottom:3px">+${cumGain.toFixed(1)} pp acum.</div>
           <div style="background:#F0F0F0;border-radius:3px;height:5px;overflow:hidden">
             <div style="background:linear-gradient(90deg,#00A650,#00C060);height:100%;width:${barPct}%;border-radius:3px"></div></div></td>
@@ -882,9 +884,10 @@ function buildSimulation() {
         <thead><tr style="border-bottom:2px solid #F0F0F0">
           <th style="width:24px;font-size:9px;font-weight:700;color:#aaa;padding:4px;text-transform:uppercase">#</th>
           <th style="font-size:9px;font-weight:700;color:#aaa;padding:4px;text-align:left;text-transform:uppercase">${dimLabel}</th>
+          <th style="width:60px;font-size:9px;font-weight:700;color:#6366F1;padding:4px;text-align:right;text-transform:uppercase">% Repr.</th>
           <th style="width:70px;font-size:9px;font-weight:700;color:#aaa;padding:4px;text-align:right;text-transform:uppercase">GAP</th>
           <th style="width:80px;font-size:9px;font-weight:700;color:#aaa;padding:4px;text-align:right;text-transform:uppercase">Ganho est.</th>
-          <th style="width:120px;font-size:9px;font-weight:700;color:#aaa;padding:4px;text-transform:uppercase">Progresso</th>
+          <th style="width:110px;font-size:9px;font-weight:700;color:#aaa;padding:4px;text-transform:uppercase">Progresso</th>
         </tr></thead><tbody>${rowsHtml}</tbody></table>
       <div style="margin-top:12px;padding:8px 12px;background:#FFFBEB;border-radius:6px;font-size:11px;color:#B45309;font-weight:700;display:flex;justify-content:space-between;align-items:center">
         <span>🎯 Potencial total — resolver os ${negSegs.length} ${dimLabel}(s)</span>
