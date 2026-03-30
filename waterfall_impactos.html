@@ -301,13 +301,23 @@ tr:hover td{background:#FAFAFA}
       <span class="drill-bc-item active">Todos os dados</span>
     </div>
 
-    <!-- 4 waterfalls WoW + MoM -->
-    <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:#3483FA;background:#EBF3FF;padding:5px 12px;border-radius:6px;margin-bottom:10px;display:inline-block">Impacto Variação WoW e MoM</div>
-    <div style="font-size:10px;font-weight:700;color:#3483FA;margin-bottom:8px;margin-top:2px">Semana vs Semana Anterior (WoW)</div>
-    <div class="drill-grid">
+    <!-- WoW / MoM toggle -->
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap">
+      <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:#3483FA;background:#EBF3FF;padding:5px 12px;border-radius:6px;display:inline-block">Impacto Variação WoW e MoM</div>
+      <div style="display:flex;gap:4px">
+        <button id="wow-btn" onclick="setWowMode('wow')" style="font-size:10px;font-weight:700;padding:4px 12px;border-radius:5px;border:1.5px solid #3483FA;background:#3483FA;color:#fff;cursor:pointer">WoW</button>
+        <button id="mom-btn" onclick="setWowMode('mom')" style="font-size:10px;font-weight:700;padding:4px 12px;border-radius:5px;border:1.5px solid #3483FA;background:#fff;color:#3483FA;cursor:pointer">MoM</button>
+      </div>
+      <span id="wow-mode-label" style="font-size:10px;color:#888">Semana vs Semana Anterior</span>
+    </div>
+    <div class="drill-grid" id="wow-mom-grid">
+      <div class="drill-card">
+        <div class="drill-card-hdr"><span class="drill-card-num">1</span><span class="drill-card-dim">Por Equipe</span></div>
+        <div class="drill-canvas-wrap" id="drill-canvas-5"></div>
+      </div>
       <div class="drill-card">
         <div class="drill-card-hdr">
-          <span class="drill-card-num">1</span>
+          <span class="drill-card-num">2</span>
           <span class="drill-card-dim">Por Office</span>
           <button class="drill-reset-btn" id="drill-reset-1" onclick="drillReset(1)" style="display:none">× limpar</button>
         </div>
@@ -315,7 +325,7 @@ tr:hover td{background:#FAFAFA}
       </div>
       <div class="drill-card">
         <div class="drill-card-hdr">
-          <span class="drill-card-num">2</span>
+          <span class="drill-card-num">3</span>
           <span class="drill-card-dim" id="drill-dim-label-2">Por Canal</span>
           <button class="drill-reset-btn" id="drill-reset-2" onclick="drillReset(2)" style="display:none">× limpar</button>
         </div>
@@ -323,7 +333,7 @@ tr:hover td{background:#FAFAFA}
       </div>
       <div class="drill-card">
         <div class="drill-card-hdr">
-          <span class="drill-card-num">3</span>
+          <span class="drill-card-num">4</span>
           <span class="drill-card-dim">Por Processo</span>
           <button class="drill-reset-btn" id="drill-reset-3" onclick="drillReset(3)" style="display:none">× limpar</button>
         </div>
@@ -331,40 +341,11 @@ tr:hover td{background:#FAFAFA}
       </div>
       <div class="drill-card">
         <div class="drill-card-hdr">
-          <span class="drill-card-num">4</span>
+          <span class="drill-card-num">5</span>
           <span class="drill-card-dim">Por CDU</span>
           <button class="drill-reset-btn" id="drill-reset-4" onclick="drillReset(4)" style="display:none">× limpar</button>
         </div>
         <div class="drill-canvas-wrap" id="drill-canvas-4"></div>
-      </div>
-      <div class="drill-card">
-        <div class="drill-card-hdr"><span class="drill-card-num">5</span><span class="drill-card-dim">Por Equipe</span></div>
-        <div class="drill-canvas-wrap" id="drill-canvas-5"></div>
-      </div>
-    </div>
-
-    <!-- 4 waterfalls MoM -->
-    <div style="font-size:10px;font-weight:700;color:#3483FA;margin-bottom:8px;margin-top:18px">Mês vs Mês Anterior (MoM)</div>
-    <div class="drill-grid">
-      <div class="drill-card">
-        <div class="drill-card-hdr"><span class="drill-card-num">1</span><span class="drill-card-dim">Por Office</span></div>
-        <div class="drill-canvas-wrap" id="mom-canvas-1"></div>
-      </div>
-      <div class="drill-card">
-        <div class="drill-card-hdr"><span class="drill-card-num">2</span><span class="drill-card-dim">Por Canal</span></div>
-        <div class="drill-canvas-wrap" id="mom-canvas-2"></div>
-      </div>
-      <div class="drill-card">
-        <div class="drill-card-hdr"><span class="drill-card-num">3</span><span class="drill-card-dim">Por Processo</span></div>
-        <div class="drill-canvas-wrap" id="mom-canvas-3"></div>
-      </div>
-      <div class="drill-card">
-        <div class="drill-card-hdr"><span class="drill-card-num">4</span><span class="drill-card-dim">Por CDU</span></div>
-        <div class="drill-canvas-wrap" id="mom-canvas-4"></div>
-      </div>
-      <div class="drill-card">
-        <div class="drill-card-hdr"><span class="drill-card-num">5</span><span class="drill-card-dim">Por Equipe</span></div>
-        <div class="drill-canvas-wrap" id="mom-canvas-5"></div>
       </div>
     </div>
 
@@ -450,6 +431,18 @@ const DRILL= { office:null, canal:null, processo:null, cdu:null };
 let drillCharts = [null, null, null, null, null];
 let tgtCharts   = [null, null, null, null, null];
 let momCharts   = [null, null, null, null, null];
+let wowMode     = 'wow'; // 'wow' | 'mom'
+
+function setWowMode(mode) {
+  wowMode = mode;
+  document.getElementById('wow-btn').style.background  = mode==='wow'?'#3483FA':'#fff';
+  document.getElementById('wow-btn').style.color       = mode==='wow'?'#fff':'#3483FA';
+  document.getElementById('mom-btn').style.background  = mode==='mom'?'#3483FA':'#fff';
+  document.getElementById('mom-btn').style.color       = mode==='mom'?'#fff':'#3483FA';
+  document.getElementById('wow-mode-label').textContent = mode==='wow'
+    ? 'Semana vs Semana Anterior' : 'Mês vs Mês Anterior';
+  buildDrillAll();
+}
 let wfChartInst = null; // compat
 let activeTab   = 'office';
 
@@ -659,14 +652,17 @@ function buildDrillWaterfall(level, dimKey, rows, prevRows, selectedKey, prefix=
   const dlLabels=[npsPrevious.toFixed(1)+'%'];
   const dlColors=['#555'];
 
+  const fullLabels=['Sem. Anterior'];
   let running=npsPrevious;
   segs.forEach(s=>{
     const isSelected=selectedKey&&s.key===selectedKey;
     const isNeg=s.wowC<0;
     const isOther=!!s.isOther;
     const alpha=selectedKey&&!isSelected?0.25:0.85;
-    const lbl=dimKey==='ch'?(CH_LABEL[s.key]||s.key):(s.key.length>16?s.key.slice(0,14)+'…':s.key);
+    const fullLbl=dimKey==='ch'?(CH_LABEL[s.key]||s.key):s.key;
+    const lbl=dimKey==='ch'?fullLbl:(s.key.length>16?s.key.slice(0,14)+'…':s.key);
     labels.push(lbl);
+    fullLabels.push(fullLbl);
     const start=running;
     running=parseFloat((running+s.wowC).toFixed(2));
     const lo=Math.min(start,running), hi=Math.max(start,running);
@@ -681,6 +677,7 @@ function buildDrillWaterfall(level, dimKey, rows, prevRows, selectedKey, prefix=
   });
 
   labels.push('Sem. Atual');
+  fullLabels.push('Sem. Atual');
   barsData.push([floor,npsAtual]);
   colors.push('rgba(26,115,232,0.85)');
   dlLabels.push(npsAtual.toFixed(1)+'%');
@@ -714,15 +711,21 @@ function buildDrillWaterfall(level, dimKey, rows, prevRows, selectedKey, prefix=
           font:{weight:700,size:9},
           anchor:'end',align:'end',offset:1,clamp:false,
         },
-        tooltip:{callbacks:{label:c=>{
-          const i=c.dataIndex;
-          if(i===0) return ` NPS Sem. Anterior: ${npsPrevious.toFixed(1)}%`;
-          if(i===labels.length-1) return ` NPS Sem. Atual: ${npsAtual.toFixed(1)}%`;
-          const s=_segs[i-1];
-          return [` WoW: ${(s.wowC>=0?'+':'')+s.wowC.toFixed(2)} pp`,
-                  ` NPS atual: ${s.nps.toFixed(1)}% | Anterior: ${s.npsPrev!=null?s.npsPrev.toFixed(1)+'%':'—'}`,
-                  ` Volume: ${fmtEnc(s.enc)} enc`];
-        }}}
+        tooltip:{callbacks:{
+          title:c=>{
+            const i=c[0].dataIndex;
+            if(i===0||i===labels.length-1) return labels[i];
+            return fullLabels[i]||labels[i];
+          },
+          label:c=>{
+            const i=c.dataIndex;
+            if(i===0) return ` NPS Sem. Anterior: ${npsPrevious.toFixed(1)}%`;
+            if(i===labels.length-1) return ` NPS Sem. Atual: ${npsAtual.toFixed(1)}%`;
+            const s=_segs[i-1];
+            return [` WoW: ${(s.wowC>=0?'+':'')+s.wowC.toFixed(2)} pp`,
+                    ` NPS atual: ${s.nps.toFixed(1)}% | Anterior: ${s.npsPrev!=null?s.npsPrev.toFixed(1)+'%':'—'}`,
+                    ` Volume: ${fmtEnc(s.enc)} enc`];
+          }}}
       },
       scales:{
         x:{grid:{display:false},ticks:{font:{size:9},color:'#444',maxRotation:40,autoSkip:false}},
@@ -901,38 +904,43 @@ function buildDrillAll() {
   // Chart 5: Equipe — sem filtro de time para mostrar todas
   const r5=filterRows(window.NPS_DATA||[],{office:DRILL.office||'ALL',canal:DRILL.canal||'ALL'});
   const r5Prev=filterRows(window.NPS_DATA||[],{office:DRILL.office||'ALL',canal:DRILL.canal||'ALL',period:prevPeriod});
-  buildDrillWaterfall(5,'team',r5,r5Prev,null);
 
-  // MoM charts (mês vs mês anterior)
+  // MoM data
   const momPeriods=latestPeriods(window.NPS_DATA||[],'MES');
   const momCurr=momPeriods[0]||null;
-  const momPrev=momPeriods[1]||null;
+  const momPrev2=momPeriods[1]||null;
   const rm1=filterRows(window.NPS_DATA||[],{team,tipo:'MES',period:momCurr});
-  const rm1Prev=filterRows(window.NPS_DATA||[],{team,tipo:'MES',period:momPrev});
-  buildDrillWaterfall(1,'office',rm1,rm1Prev,null,'mom-canvas-',momCharts);
-
+  const rm1Prev=filterRows(window.NPS_DATA||[],{team,tipo:'MES',period:momPrev2});
   const rm2=filterRows(window.NPS_DATA||[],{team,tipo:'MES',period:momCurr,office:DRILL.office||'ALL'});
-  const rm2Prev=filterRows(window.NPS_DATA||[],{team,tipo:'MES',period:momPrev,office:DRILL.office||'ALL'});
-  buildDrillWaterfall(2,'ch',rm2,rm2Prev,null,'mom-canvas-',momCharts);
-
+  const rm2Prev=filterRows(window.NPS_DATA||[],{team,tipo:'MES',period:momPrev2,office:DRILL.office||'ALL'});
   const rm3=filterRows(window.NPS_PROCESS_DATA||[],{team,tipo:'MES',period:momCurr,office:DRILL.office||'ALL',canal:DRILL.canal||'ALL'});
-  const rm3Prev=filterRows(window.NPS_PROCESS_DATA||[],{team,tipo:'MES',period:momPrev,office:DRILL.office||'ALL',canal:DRILL.canal||'ALL'});
-  buildDrillWaterfall(3,'processo',rm3,rm3Prev,null,'mom-canvas-',momCharts);
-
+  const rm3Prev=filterRows(window.NPS_PROCESS_DATA||[],{team,tipo:'MES',period:momPrev2,office:DRILL.office||'ALL',canal:DRILL.canal||'ALL'});
   const rm4=filterRows(window.NPS_CDU_DATA||[],{team,tipo:'MES',period:momCurr,office:DRILL.office||'ALL',canal:DRILL.canal||'ALL'});
-  const rm4Prev=filterRows(window.NPS_CDU_DATA||[],{team,tipo:'MES',period:momPrev,office:DRILL.office||'ALL',canal:DRILL.canal||'ALL'});
-  buildDrillWaterfall(4,'cdu',rm4,rm4Prev,null,'mom-canvas-',momCharts);
-
+  const rm4Prev=filterRows(window.NPS_CDU_DATA||[],{team,tipo:'MES',period:momPrev2,office:DRILL.office||'ALL',canal:DRILL.canal||'ALL'});
   const rm5=filterRows(window.NPS_DATA||[],{tipo:'MES',period:momCurr,office:DRILL.office||'ALL',canal:DRILL.canal||'ALL'});
-  const rm5Prev=filterRows(window.NPS_DATA||[],{tipo:'MES',period:momPrev,office:DRILL.office||'ALL',canal:DRILL.canal||'ALL'});
-  buildDrillWaterfall(5,'team',rm5,rm5Prev,null,'mom-canvas-',momCharts);
+  const rm5Prev=filterRows(window.NPS_DATA||[],{tipo:'MES',period:momPrev2,office:DRILL.office||'ALL',canal:DRILL.canal||'ALL'});
 
-  // TGT charts (vs Target)
+  // Renderiza WoW ou MoM conforme toggle
+  if(wowMode==='wow') {
+    buildDrillWaterfall(5,'team',r5,r5Prev,null);
+    buildDrillWaterfall(1,'office',r1,r1Prev,DRILL.office);
+    buildDrillWaterfall(2,'ch',r2,r2Prev,DRILL.canal);
+    buildDrillWaterfall(3,'processo',r3,r3Prev,DRILL.processo);
+    buildDrillWaterfall(4,'cdu',r4,r4Prev,DRILL.cdu);
+  } else {
+    buildDrillWaterfall(5,'team',rm5,rm5Prev,null);
+    buildDrillWaterfall(1,'office',rm1,rm1Prev,null);
+    buildDrillWaterfall(2,'ch',rm2,rm2Prev,null);
+    buildDrillWaterfall(3,'processo',rm3,rm3Prev,null);
+    buildDrillWaterfall(4,'cdu',rm4,rm4Prev,null);
+  }
+
+  // TGT charts (vs Target) — sempre usa dados semanais atuais
   buildTgtWaterfall(1,'office',r1);
   buildTgtWaterfall(2,'ch',r2);
   buildTgtWaterfall(3,'processo',r3);
   buildTgtWaterfall(4,'cdu',r4);
-  buildTgtWaterfall(5,'team',r5);
+  buildTgtWaterfall(5,'team',filterRows(window.NPS_DATA||[],{office:DRILL.office||'ALL',canal:DRILL.canal||'ALL'}));
 
   buildSimulation();
 }
