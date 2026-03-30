@@ -193,11 +193,13 @@ tr:hover td{background:#FAFAFA}
           <div class="wf-title">🎯 Drill-down por NPS Driver — Onde está o GAP?</div>
           <div class="wf-sub">Driver → Processo → Office → Canal. Clique em qualquer barra para filtrar o próximo nível.</div>
         </div>
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-          <span style="font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.4px">Office</span>
-          <select class="sfsel" id="wf-office" onchange="buildDrillAll()">
-            <option value="ALL">Todos</option>
-          </select>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <div style="display:flex;align-items:center;gap:5px">
+            <span style="font-size:10px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.4px">Office</span>
+            <select class="sfsel" id="wf-office" onchange="buildDrillAll()">
+              <option value="ALL">Todos</option>
+            </select>
+          </div>
         </div>
       </div>
     </div>
@@ -461,28 +463,24 @@ function populateFilters() {
     offSel.appendChild(opt);
   });
 
-  // Repopula f-driver
+  // Repopula f-driver e wf-driver (sincronizados)
   const drvSel=document.getElementById('f-driver');
-  const prevDrv=drvSel.value;
-  drvSel.innerHTML='<option value="ALL">Todos</option>';
-  [...cfg().drivers].sort().forEach(d=>{
-    const opt=document.createElement('option'); opt.value=d; opt.text=d;
-    drvSel.appendChild(opt);
-  });
-  if([...cfg().drivers].includes(prevDrv)) drvSel.value=prevDrv;
-  F.driver=drvSel.value;
+  const wfDrvSel=document.getElementById('wf-driver');
+  const prevDrv=F.driver||'ALL';
+  const driverOpts='<option value="ALL">Todos</option>'+[...cfg().drivers].sort().map(d=>`<option value="${d}">${d}</option>`).join('');
+  if(drvSel)   { drvSel.innerHTML=driverOpts;   drvSel.value=[...cfg().drivers].includes(prevDrv)?prevDrv:'ALL'; }
+  if(wfDrvSel) { wfDrvSel.innerHTML=driverOpts; wfDrvSel.value=drvSel?drvSel.value:'ALL'; }
+  F.driver=drvSel?drvSel.value:'ALL';
 
-  // Repopula f-equipe
+  // Repopula f-equipe e wf-equipe (sincronizados)
   const eqSel=document.getElementById('f-equipe');
-  const prevEq=eqSel.value;
-  eqSel.innerHTML='<option value="ALL">Todas</option>';
+  const wfEqSel=document.getElementById('wf-equipe');
+  const prevEq=F.equipe||'ALL';
   const equipes=[...new Set(data.map(r=>r.team).filter(Boolean))].sort();
-  equipes.forEach(e=>{
-    const opt=document.createElement('option'); opt.value=e; opt.text=e;
-    eqSel.appendChild(opt);
-  });
-  if(equipes.includes(prevEq)) eqSel.value=prevEq;
-  F.equipe=eqSel.value;
+  const eqOpts='<option value="ALL">Todas</option>'+equipes.map(e=>`<option value="${e}">${e}</option>`).join('');
+  if(eqSel)   { eqSel.innerHTML=eqOpts;   eqSel.value=equipes.includes(prevEq)?prevEq:'ALL'; }
+  if(wfEqSel) { wfEqSel.innerHTML=eqOpts; wfEqSel.value=eqSel?eqSel.value:'ALL'; }
+  F.equipe=eqSel?eqSel.value:'ALL';
 }
 
 function applyFilters() {
@@ -503,22 +501,26 @@ function applyFilters() {
   buildReport();
 }
 
-function applyGlobalFilter() {
-  F.driver = document.getElementById('f-driver').value;
-  F.equipe = document.getElementById('f-equipe').value;
-  // Reseta drill ao usar filtros globais
+// Sincroniza os dois dropdowns (filter-bar e painel waterfall) e reconstrói
+function syncWfFilter(dim, val) {
+  F[dim] = val;
+  const barSel  = document.getElementById('f-'   + dim);
+  const wfSel   = document.getElementById('wf-'  + dim);
+  if (barSel && barSel.value !== val) barSel.value = val;
+  if (wfSel  && wfSel.value  !== val) wfSel.value  = val;
   DRILL.driver = DRILL.equipe = DRILL.office = DRILL.canal = null;
   drillCharts.forEach((c,i)=>{ try{c&&c.destroy();}catch(e){} drillCharts[i]=null; });
   buildReport();
 }
 
+function applyGlobalFilter() {
+  syncWfFilter('driver', document.getElementById('f-driver').value);
+  syncWfFilter('equipe', document.getElementById('f-equipe').value);
+}
+
 function clearGlobalFilters() {
-  document.getElementById('f-driver').value = 'ALL';
-  document.getElementById('f-equipe').value = 'ALL';
-  F.driver = 'ALL'; F.equipe = 'ALL';
-  DRILL.driver = DRILL.equipe = DRILL.office = DRILL.canal = null;
-  drillCharts.forEach((c,i)=>{ try{c&&c.destroy();}catch(e){} drillCharts[i]=null; });
-  buildReport();
+  syncWfFilter('driver', 'ALL');
+  syncWfFilter('equipe', 'ALL');
 }
 
 let _trendCharts = { wow: null, mom: null };
@@ -783,16 +785,16 @@ function drillSelect(level, key) {
   if(level===1){
     const t=DRILL.driver===key; DRILL.driver=t?null:key;
     DRILL.equipe=null; DRILL.office=null; DRILL.canal=null;
-    // Sincroniza dropdown Driver
-    const dSel=document.getElementById('f-driver');
-    if(dSel){ dSel.value=t?'ALL':key; F.driver=dSel.value; }
+    const v=t?'ALL':key;
+    ['f-driver','wf-driver'].forEach(id=>{ const s=document.getElementById(id); if(s) s.value=v; });
+    F.driver=v;
   }
   if(level===2){
     const t=DRILL.equipe===key; DRILL.equipe=t?null:key;
     DRILL.office=null; DRILL.canal=null;
-    // Sincroniza dropdown Equipe
-    const eSel=document.getElementById('f-equipe');
-    if(eSel){ eSel.value=t?'ALL':key; F.equipe=eSel.value; }
+    const v=t?'ALL':key;
+    ['f-equipe','wf-equipe'].forEach(id=>{ const s=document.getElementById(id); if(s) s.value=v; });
+    F.equipe=v;
   }
   if(level===3){const t=DRILL.office===key; DRILL.office=t?null:key; DRILL.canal=null;}
   if(level===4){const t=DRILL.canal===key; DRILL.canal=t?null:key;}
