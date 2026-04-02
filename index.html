@@ -255,10 +255,16 @@ tr.ch-sub td  { padding-left: 24px; color: #555; }
 </div>
 
 <div class="tabs-bar">
-  <button class="tab-btn active">🌐 Cross — Todos os Times</button>
+  <button class="tab-btn active" onclick="switchTab('tab-cross')">🌐 Cross — Todos os Times</button>
+  <button class="tab-btn" onclick="switchTab('tab-me')">ME Sellers Longtail</button>
+  <button class="tab-btn" onclick="switchTab('tab-ventas')">Ventas Sellers Longtail</button>
+  <button class="tab-btn" onclick="switchTab('tab-publicaciones')">Publicaciones Sellers Longtail</button>
 </div>
 
 <div id="tab-cross" class="tab-content active"><div class="page" id="page-cross"></div></div>
+<div id="tab-me" class="tab-content"><div class="page" id="page-pre"></div></div>
+<div id="tab-ventas" class="tab-content"><div class="page" id="page-post"></div></div>
+<div id="tab-publicaciones" class="tab-content"><div class="page" id="page-compra"></div></div>
 
 <script>
 Chart.register(ChartDataLabels);
@@ -1567,8 +1573,8 @@ function renderRepOutlier(){
 
 // ─────────────────────────────────────────
 function switchTab(tabId){
-  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active',true));
-  document.getElementById('tab-cross').classList.add('active');
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b.getAttribute('onclick')===`switchTab('${tabId}')`));
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.toggle('active', t.id===tabId));
 }
 
 window.addEventListener('DOMContentLoaded',()=>{
@@ -1692,6 +1698,7 @@ function buildTeamsFromRows(rows){
   const TEAM_MAP={
     'BR_BUYERS_PRE_ENTREGA':'pre','BR_BUYERS_POST_ENTREGA':'post','BR_BUYERS_COMPRA':'compra',
     'BR_BUYERS_PRE':'pre','BR_BUYERS_POST':'post',
+    'BR_ME_SELLERS_LONGTAIL':'pre','BR_VENTAS_SELLERS_LONGTAIL':'post','BR_PUBLICACIONES_SELLERS_LONGTAIL':'compra',
   };
   const resolveTeam=name=>TEAM_MAP[name.toUpperCase().replace(/_ENTREGA$/,'_ENTREGA')]
     || TEAM_MAP[name.toUpperCase()]
